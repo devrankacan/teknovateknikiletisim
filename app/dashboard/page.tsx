@@ -45,7 +45,6 @@ const STATUS_FILTERS = [
   { label: "Tümü", value: "all" },
   { label: "Aktif", value: "active" },
   { label: "Bekleyen", value: "pending" },
-  { label: "Çözüldü", value: "resolved" },
 ];
 
 const platformColor: Record<string, string> = {
@@ -532,14 +531,6 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {selectedConv.status !== "resolved" && (
-                  <button onClick={() => resolveConversation(selectedConv.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                    style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e" }}>
-                    <Check className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Çözüldü İşaretle</span>
-                  </button>
-                )}
                 <button className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }}>
                   <MoreVertical className="w-4 h-4" />
                 </button>
@@ -587,13 +578,7 @@ export default function DashboardPage() {
 
             {/* Input */}
             <div className="px-4 py-4 flex-shrink-0" style={{ background: "var(--surface)", borderTop: "1px solid var(--border-subtle)" }}>
-              {selectedConv.status === "resolved" ? (
-                <div className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm"
-                  style={{ background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-                  <CheckCheck className="w-4 h-4" />
-                  Bu konuşma çözüldü olarak işaretlendi
-                </div>
-              ) : (
+              {(
                 <div className="flex items-end gap-2 rounded-2xl px-4 py-3"
                   style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
                   <button className="mb-0.5 hidden sm:block" style={{ color: "var(--text-muted)" }}>
@@ -624,6 +609,7 @@ export default function DashboardPage() {
                 Enter ile gönder · Shift+Enter yeni satır
               </div>
             </div>
+
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col gap-4" style={{ color: "var(--text-muted)" }}>
