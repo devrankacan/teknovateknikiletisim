@@ -56,22 +56,24 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-md px-4">
         {/* Logo area */}
-        <div className="text-center mb-10">
+        <div className="mb-8">
           {logoUrl ? (
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl mb-4 overflow-hidden"
-              style={{ background: "rgba(15,23,41,0.8)", border: "1px solid rgba(37,99,235,0.2)" }}>
-              <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: 6 }} />
+            <div className="w-full rounded-2xl overflow-hidden flex items-center justify-center"
+              style={{ height: 180, background: "rgba(15,23,41,0.8)", border: "1px solid rgba(37,99,235,0.2)" }}>
+              <img src={logoUrl} alt="logo" style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain" }} />
             </div>
           ) : (
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-              style={{ background: "linear-gradient(135deg, #2563EB 0%, #60A5FA 100%)" }}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4"
+                style={{ background: "linear-gradient(135deg, #2563EB 0%, #60A5FA 100%)" }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl font-bold gradient-text">Teknovateknik</h1>
+              <p className="text-sm mt-1" style={{ color: "#7A90B8" }}>İletişim Merkezi Yönetim Paneli</p>
             </div>
           )}
-          <h1 className="text-3xl font-bold mb-1 gradient-text">Teknovateknik</h1>
-          <p className="text-sm" style={{ color: "#7A90B8" }}>İletişim Merkezi Yönetim Paneli</p>
         </div>
 
         {/* Card */}

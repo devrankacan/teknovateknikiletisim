@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
 
       // Instagram / Messenger
       for (const messaging of entry.messaging ?? []) {
+        // Echo mesajlarını (sayfanın kendi gönderdiği) atla
+        if (messaging.message?.is_echo) continue;
         if (messaging.message?.text) {
           const platform = body.object === "instagram" ? "instagram" : "messenger";
           console.log(`[webhook] ${platform} mesajı işleniyor, sender: ${messaging.sender.id}`);
