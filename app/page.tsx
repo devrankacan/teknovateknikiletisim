@@ -89,11 +89,11 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username */}
             <div>
-              <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "#3D5278" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em", color: "#3D5278" }}>
                 Kullanıcı Adı
               </label>
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D5278" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <svg style={{ position: "absolute", left: 12, pointerEvents: "none", flexShrink: 0 }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D5278" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
                 </svg>
@@ -103,8 +103,7 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="kullanici_adi"
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none"
-                  style={{ background: "#080D1A", border: "1px solid #1E2D4A", color: "#E8F0FF", transition: "border-color 0.2s, box-shadow 0.2s" }}
+                  style={{ width: "100%", paddingLeft: 40, paddingRight: 16, paddingTop: 12, paddingBottom: 12, borderRadius: 12, fontSize: 14, outline: "none", background: "#080D1A", border: "1px solid #1E2D4A", color: "#E8F0FF", transition: "border-color 0.2s, box-shadow 0.2s" }}
                   onFocus={(e) => { e.target.style.borderColor = "#2563EB"; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.12)"; }}
                   onBlur={(e) => { e.target.style.borderColor = "#1E2D4A"; e.target.style.boxShadow = "none"; }}
                 />
@@ -113,11 +112,11 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "#3D5278" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em", color: "#3D5278" }}>
                 Şifre
               </label>
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D5278" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <svg style={{ position: "absolute", left: 12, pointerEvents: "none", flexShrink: 0 }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D5278" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
@@ -127,13 +126,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-10 pr-12 py-3 rounded-xl text-sm outline-none"
-                  style={{ background: "#080D1A", border: "1px solid #1E2D4A", color: "#E8F0FF", transition: "border-color 0.2s, box-shadow 0.2s" }}
+                  style={{ width: "100%", paddingLeft: 40, paddingRight: 44, paddingTop: 12, paddingBottom: 12, borderRadius: 12, fontSize: 14, outline: "none", background: "#080D1A", border: "1px solid #1E2D4A", color: "#E8F0FF", transition: "border-color 0.2s, box-shadow 0.2s" }}
                   onFocus={(e) => { e.target.style.borderColor = "#2563EB"; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.12)"; }}
                   onBlur={(e) => { e.target.style.borderColor = "#1E2D4A"; e.target.style.boxShadow = "none"; }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#3D5278" }}>
+                  style={{ position: "absolute", right: 12, background: "none", border: "none", cursor: "pointer", color: "#3D5278", display: "flex", alignItems: "center" }}>
                   {showPassword ? (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
