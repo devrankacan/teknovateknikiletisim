@@ -7,7 +7,7 @@ import { formatTime, formatFullTime } from "@/lib/auth";
 import PlatformIcon from "@/components/PlatformIcon";
 import {
   Search, Send, LogOut, BarChart2, MessageSquare, CheckCheck,
-  Clock, MoreVertical, Bell, Users, X, Check, Paperclip, Smile, ChevronDown, Camera,
+  Clock, MoreVertical, Bell, Users, X, Check, Paperclip, Smile, Camera, ArrowLeft,
 } from "lucide-react";
 
 type DBMessage = {
@@ -41,13 +41,6 @@ type Stats = {
   avgResponseTime: string;
 };
 
-const PLATFORM_FILTERS: { label: string; value: Platform | "all" }[] = [
-  { label: "Tümü", value: "all" },
-  { label: "WhatsApp", value: "whatsapp" },
-  { label: "Instagram", value: "instagram" },
-  { label: "Messenger", value: "messenger" },
-];
-
 const STATUS_FILTERS = [
   { label: "Tümü", value: "all" },
   { label: "Aktif", value: "active" },
@@ -61,30 +54,59 @@ const platformColor: Record<string, string> = {
   messenger: "#0084FF",
 };
 
+const WA_SVG = (size: number) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#25D366">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+);
+const IG_SVG = (size: number) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none" />
+  </svg>
+);
+const MSG_SVG = (size: number) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#0084FF">
+    <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z" />
+  </svg>
+);
+
+const PLATFORM_FILTERS: { label: string; value: Platform | "all"; icon: (s: number) => React.ReactNode; color: string; bg: string; border: string }[] = [
+  {
+    label: "Tümü", value: "all", color: "var(--text-primary)", bg: "var(--surface-raised)", border: "var(--border)",
+    icon: (s) => (
+      <div className="flex -space-x-1.5">
+        <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)" }}>{WA_SVG(12)}</div>
+        <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)" }}>{IG_SVG(12)}</div>
+        <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)" }}>{MSG_SVG(12)}</div>
+      </div>
+    ),
+  },
+  { label: "WhatsApp", value: "whatsapp", color: "#25D366", bg: "rgba(37,211,102,0.08)", border: "rgba(37,211,102,0.2)", icon: (s) => WA_SVG(s) },
+  { label: "Instagram", value: "instagram", color: "#E1306C", bg: "rgba(225,48,108,0.08)", border: "rgba(225,48,108,0.2)", icon: (s) => IG_SVG(s) },
+  { label: "Messenger", value: "messenger", color: "#0084FF", bg: "rgba(0,132,255,0.08)", border: "rgba(0,132,255,0.2)", icon: (s) => MSG_SVG(s) },
+];
+
 export default function DashboardPage() {
   const router = useRouter();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [showPlatformDropdown, setShowPlatformDropdown] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [showMobileChat, setShowMobileChat] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    const update = () => setIsNarrow(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
+  useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
   useEffect(() => {
     const saved = localStorage.getItem("company_logo");
     if (saved) setLogoUrl(saved);
-  }, []);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowPlatformDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -114,22 +136,18 @@ export default function DashboardPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sseRef = useRef<EventSource | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Auth check
   useEffect(() => {
     const u = sessionStorage.getItem("current_user");
     if (!u) { router.push("/"); return; }
     setCurrentUser(JSON.parse(u));
   }, [router]);
 
-  // Fetch conversations
   const fetchConversations = useCallback(async () => {
     const params = new URLSearchParams();
     if (platformFilter !== "all") params.set("platform", platformFilter);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (search) params.set("search", search);
-
     const res = await fetch(`/api/conversations?${params}`);
     if (res.status === 401) { router.push("/"); return; }
     const data: DBConversation[] = await res.json();
@@ -137,25 +155,18 @@ export default function DashboardPage() {
     setLoadingConvs(false);
   }, [platformFilter, statusFilter, search, router]);
 
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+  useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
-  // Fetch stats
   useEffect(() => {
     if (!showStats) return;
     fetch("/api/stats").then((r) => r.json()).then(setStats);
   }, [showStats]);
 
-  // SSE for real-time updates
   useEffect(() => {
     const es = new EventSource("/api/sse");
     sseRef.current = es;
-
     es.addEventListener("new_message", (e) => {
       const data = JSON.parse(e.data) as { conversationId: string; message: DBMessage; conversation?: DBConversation };
-
-      // Eğer bu konuşma açıksa mesajı ekle
       setSelectedConv((prev) => {
         if (prev?.id === data.conversationId) {
           setMessages((msgs) => [...msgs, data.message]);
@@ -163,43 +174,33 @@ export default function DashboardPage() {
         }
         return prev;
       });
-
-      // Konuşma listesini güncelle
       setConversations((prev) => {
         const exists = prev.find((c) => c.id === data.conversationId);
         if (exists) {
           return prev.map((c) =>
             c.id === data.conversationId
-              ? {
-                  ...c,
-                  unreadCount: data.message.sender === "customer" ? c.unreadCount + 1 : c.unreadCount,
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...c, unreadCount: data.message.sender === "customer" ? c.unreadCount + 1 : c.unreadCount, updatedAt: new Date().toISOString() }
               : c
           );
         }
-        // Yeni konuşmayı yeniden çek
         fetchConversations();
         return prev;
       });
     });
-
     return () => es.close();
   }, [fetchConversations]);
 
-  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   async function selectConversation(conv: DBConversation) {
     setSelectedConv(conv);
+    setShowMobileChat(true);
     const res = await fetch(`/api/conversations/${conv.id}`);
     const full: DBConversation = await res.json();
     setMessages(full.messages ?? []);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c))
-    );
+    setConversations((prev) => prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c)));
   }
 
   async function sendMessage() {
@@ -208,30 +209,23 @@ export default function DashboardPage() {
     const content = messageInput.trim();
     setMessageInput("");
     if (textareaRef.current) textareaRef.current.style.height = "44px";
-
     const res = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conversationId: selectedConv.id, content }),
     });
-
     if (res.ok) {
       const msg: DBMessage = await res.json();
       setMessages((prev) => [...prev, msg]);
       setConversations((prev) =>
-        prev.map((c) =>
-          c.id === selectedConv.id ? { ...c, updatedAt: new Date().toISOString() } : c
-        )
+        prev.map((c) => c.id === selectedConv.id ? { ...c, updatedAt: new Date().toISOString() } : c)
       );
     }
     setSending(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
   function handleTextareaChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -246,9 +240,7 @@ export default function DashboardPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "resolved" }),
     });
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: "resolved" } : c))
-    );
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, status: "resolved" } : c)));
     if (selectedConv?.id === id) setSelectedConv((p) => p ? { ...p, status: "resolved" } : p);
   }
 
@@ -262,66 +254,61 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
+
       {/* ===== LEFT SIDEBAR ===== */}
-      <aside className="flex flex-col w-96 flex-shrink-0" style={{ background: "var(--surface)", borderRight: "1px solid var(--border-subtle)" }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => logoInputRef.current?.click()}
-              className="relative w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 group"
-              style={{ background: logoUrl ? "transparent" : "linear-gradient(135deg, var(--accent), #60A5FA)" }}
-              title="Logo yükle"
-            >
-              {logoUrl
-                ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
-                : <span className="font-bold text-sm text-white">TT</span>
-              }
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                <Camera className="w-3.5 h-3.5 text-white" />
-              </div>
-            </button>
-            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            <div>
-              <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Teknovateknik</div>
-              <div className="text-xs" style={{ color: "var(--text-muted)" }}>İletişim Merkezi</div>
+      <aside
+        className="flex-col flex-shrink-0"
+        style={{
+          background: "var(--surface)",
+          borderRight: "1px solid var(--border-subtle)",
+          width: isNarrow ? "100vw" : "min(400px, 400px)",
+          display: isNarrow && showMobileChat ? "none" : "flex",
+        }}
+      >
+        {/* Header — logo + actions */}
+        <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          {/* Logo */}
+          <button
+            onClick={() => logoInputRef.current?.click()}
+            className="relative rounded-2xl overflow-hidden flex-shrink-0 group"
+            style={{
+              width: 52, height: 52,
+              background: logoUrl ? "transparent" : "linear-gradient(135deg, var(--accent), #60A5FA)",
+            }}
+            title="Logo yüklemek için tıkla"
+          >
+            {logoUrl
+              ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : <span className="font-bold text-white" style={{ fontSize: 16 }}>TT</span>
+            }
+            <div className="absolute inset-0 flex items-center justify-center rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,0.45)" }}>
+              <Camera style={{ width: 16, height: 16, color: "white" }} />
             </div>
-          </div>
-          <div className="flex items-center gap-1">
+          </button>
+          <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+
+          {/* Action icons — vertical stack */}
+          <div className="flex flex-col items-center gap-1">
             <button onClick={() => setShowStats(!showStats)} className="p-2 rounded-lg"
               style={{ color: showStats ? "var(--accent)" : "var(--text-muted)" }} title="İstatistikler">
-              <BarChart2 className="w-4 h-4" />
+              <BarChart2 style={{ width: 18, height: 18 }} />
             </button>
             <button className="relative p-2 rounded-lg" style={{ color: "var(--text-muted)" }}>
-              <Bell className="w-4 h-4" />
+              <Bell style={{ width: 18, height: 18 }} />
               {totalUnread > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
-                  style={{ background: "var(--accent)", padding: "0 3px" }}>{totalUnread}</span>
+                <span className="absolute top-1 right-1 min-w-4 h-4 rounded-full text-white flex items-center justify-center font-bold"
+                  style={{ background: "var(--accent)", fontSize: 9, padding: "0 3px" }}>{totalUnread}</span>
               )}
             </button>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: "var(--text-muted)" }}
-              title={theme === "dark" ? "Gündüz modu" : "Gece modu"}
-            >
-              {theme === "dark" ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="5"/>
-                  <line x1="12" y1="1" x2="12" y2="3"/>
-                  <line x1="12" y1="21" x2="12" y2="23"/>
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                  <line x1="1" y1="12" x2="3" y2="12"/>
-                  <line x1="21" y1="12" x2="23" y2="12"/>
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
-              )}
+            <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-2 rounded-lg"
+              style={{ color: "var(--text-muted)" }} title={theme === "dark" ? "Gündüz modu" : "Gece modu"}>
+              {theme === "dark"
+                ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              }
+            </button>
+            <button onClick={logout} className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }} title="Çıkış yap">
+              <LogOut style={{ width: 18, height: 18 }} />
             </button>
           </div>
         </div>
@@ -364,92 +351,28 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Platform filter dropdown */}
-        <div className="px-4 pb-3 relative" ref={dropdownRef}>
-          <button
-            onClick={() => setShowPlatformDropdown((v) => !v)}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{ background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-          >
-            <div className="flex items-center gap-2">
-              {platformFilter === "all" ? (
-                <>
-                  <div className="flex -space-x-1">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    </div>
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)", border: "1px solid rgba(225,48,108,0.3)" }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
-                    </div>
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)", border: "1px solid rgba(0,132,255,0.3)" }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg>
-                    </div>
-                  </div>
-                  <span>Tüm Platformlar</span>
-                </>
-              ) : platformFilter === "whatsapp" ? (
-                <>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  </div>
-                  <span style={{ color: "#25D366" }}>WhatsApp</span>
-                </>
-              ) : platformFilter === "instagram" ? (
-                <>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)", border: "1px solid rgba(225,48,108,0.3)" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
-                  </div>
-                  <span style={{ color: "#E1306C" }}>Instagram</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)", border: "1px solid rgba(0,132,255,0.3)" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg>
-                  </div>
-                  <span style={{ color: "#0084FF" }}>Messenger</span>
-                </>
-              )}
-            </div>
-            <ChevronDown className={`w-4 h-4 transition-transform ${showPlatformDropdown ? "rotate-180" : ""}`} style={{ color: "var(--text-muted)" }} />
-          </button>
-
-          {showPlatformDropdown && (
-            <div className="absolute left-4 right-4 z-50 mt-1 rounded-xl overflow-hidden"
-              style={{ background: "var(--surface-raised)", border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}>
-              {[
-                { value: "all" as const, label: "Tüm Platformlar", color: "var(--text-primary)", icon: (
-                  <div className="flex -space-x-1">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg></div>
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg></div>
-                  </div>
-                ) },
-                { value: "whatsapp" as const, label: "WhatsApp", color: "#25D366", icon: <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div> },
-                { value: "instagram" as const, label: "Instagram", color: "#E1306C", icon: <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)", border: "1px solid rgba(225,48,108,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg></div> },
-                { value: "messenger" as const, label: "Messenger", color: "#0084FF", icon: <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)", border: "1px solid rgba(0,132,255,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg></div> },
-              ].map((opt) => (
-                <button key={opt.value}
-                  onClick={() => { setPlatformFilter(opt.value); setShowPlatformDropdown(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors text-left"
-                  style={{
-                    background: platformFilter === opt.value ? "var(--accent-light)" : "transparent",
-                    color: platformFilter === opt.value ? "var(--accent)" : opt.color,
-                    borderLeft: platformFilter === opt.value ? "2px solid var(--accent)" : "2px solid transparent",
-                  }}
-                  onMouseEnter={(e) => { if (platformFilter !== opt.value) (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)"; }}
-                  onMouseLeave={(e) => { if (platformFilter !== opt.value) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                >
-                  {opt.icon}
-                  {opt.label}
-                  {platformFilter === opt.value && <Check className="w-3.5 h-3.5 ml-auto" style={{ color: "var(--accent)" }} />}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Platform filter — vertical icons */}
+        <div className="px-4 pb-3 flex flex-col gap-1.5">
+          {PLATFORM_FILTERS.map((f) => {
+            const active = platformFilter === f.value;
+            return (
+              <button key={f.value} onClick={() => setPlatformFilter(f.value)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left"
+                style={{
+                  background: active ? f.bg : "transparent",
+                  border: `1px solid ${active ? f.border : "transparent"}`,
+                  color: active ? f.color : "var(--text-secondary)",
+                }}>
+                <span className="flex-shrink-0">{f.icon(20)}</span>
+                <span>{f.label}</span>
+                {active && <Check className="w-3.5 h-3.5 ml-auto" style={{ color: f.color }} />}
+              </button>
+            );
+          })}
         </div>
 
         {/* Status filter */}
-        <div className="px-4 pb-3 flex gap-1.5">
+        <div className="px-4 pb-3 flex gap-1.5 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button key={f.value} onClick={() => setStatusFilter(f.value)}
               className="px-2.5 py-1 rounded-full text-xs font-medium"
@@ -496,7 +419,11 @@ export default function DashboardPage() {
                       {conv.customerAvatar}
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full"
-                      style={{ background: platformColor[conv.platform], border: "2px solid var(--surface)" }} />
+                      style={{ background: platformColor[conv.platform], border: "2px solid var(--surface)" }}>
+                      {conv.platform === "whatsapp" && <span className="flex items-center justify-center w-full h-full">{WA_SVG(8)}</span>}
+                      {conv.platform === "instagram" && <span className="flex items-center justify-center w-full h-full">{IG_SVG(8)}</span>}
+                      {conv.platform === "messenger" && <span className="flex items-center justify-center w-full h-full">{MSG_SVG(8)}</span>}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
@@ -537,34 +464,40 @@ export default function DashboardPage() {
         </div>
 
         {/* User footer */}
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-              style={{ background: "linear-gradient(135deg, var(--accent), #60A5FA)" }}>
-              {currentUser?.avatar ?? "TT"}
-            </div>
-            <div>
-              <div className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{currentUser?.name ?? "Teknovateknik"}</div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />
-                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>Çevrimiçi</span>
-              </div>
+        <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+            style={{ background: "linear-gradient(135deg, var(--accent), #60A5FA)" }}>
+            {currentUser?.avatar ?? "TT"}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>{currentUser?.name ?? "Teknovateknik"}</div>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />
+              <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>Çevrimiçi</span>
             </div>
           </div>
-          <button onClick={logout} className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }} title="Çıkış yap">
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </aside>
 
       {/* ===== MAIN CHAT ===== */}
-      <main className="flex flex-col flex-1 overflow-hidden">
+      <main
+        className="flex-col flex-1 overflow-hidden"
+        style={{ display: !isNarrow || showMobileChat ? "flex" : "none" }}
+      >
         {selectedConv ? (
           <>
             {/* Chat header */}
-            <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
+            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
               style={{ background: "var(--surface)", borderBottom: "1px solid var(--border-subtle)" }}>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                {/* Mobile back button */}
+                <button
+                  onClick={() => { setShowMobileChat(false); }}
+                  className="p-2 rounded-lg md:hidden"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
                     style={{
@@ -574,13 +507,17 @@ export default function DashboardPage() {
                     }}>
                     {selectedConv.customerAvatar}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full"
-                    style={{ background: platformColor[selectedConv.platform], border: "2px solid var(--surface)" }} />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                    style={{ background: platformColor[selectedConv.platform], border: "2px solid var(--surface)" }}>
+                    {selectedConv.platform === "whatsapp" && WA_SVG(7)}
+                    {selectedConv.platform === "instagram" && IG_SVG(7)}
+                    {selectedConv.platform === "messenger" && MSG_SVG(7)}
+                  </div>
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{selectedConv.customerName}</span>
-                    <PlatformIcon platform={selectedConv.platform} size={14} showLabel />
+                    <PlatformIcon platform={selectedConv.platform} size={13} showLabel />
                   </div>
                   <div className="text-xs" style={{ color: "var(--text-secondary)" }}>{selectedConv.customerHandle}</div>
                 </div>
@@ -591,7 +528,7 @@ export default function DashboardPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e" }}>
                     <Check className="w-3.5 h-3.5" />
-                    Çözüldü İşaretle
+                    <span className="hidden sm:inline">Çözüldü İşaretle</span>
                   </button>
                 )}
                 <button className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }}>
@@ -601,8 +538,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" style={{ background: "var(--bg)" }}>
-              <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4" style={{ background: "var(--bg)" }}>
+              <div className="flex items-center gap-3 my-2">
                 <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
                 <span className="text-[10px] px-3 py-1 rounded-full"
                   style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
@@ -610,7 +547,6 @@ export default function DashboardPage() {
                 </span>
                 <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
               </div>
-
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === "agent" ? "justify-end" : "justify-start"}`}>
                   {msg.sender === "customer" && (
@@ -619,8 +555,8 @@ export default function DashboardPage() {
                       {selectedConv.customerAvatar.slice(0, 1)}
                     </div>
                   )}
-                  <div className={`max-w-md flex flex-col ${msg.sender === "agent" ? "items-end" : "items-start"}`}>
-                    <div className="px-5 py-3 rounded-2xl text-sm leading-relaxed"
+                  <div className={`max-w-xs sm:max-w-md flex flex-col ${msg.sender === "agent" ? "items-end" : "items-start"}`}>
+                    <div className="px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
                       style={msg.sender === "agent"
                         ? { background: "linear-gradient(135deg, var(--accent), #1D4ED8)", color: "white", borderBottomRightRadius: 6, boxShadow: "0 2px 8px rgba(37,99,235,0.25)" }
                         : { background: "var(--surface-raised)", color: "var(--text-primary)", border: "1px solid var(--border)", borderBottomLeftRadius: 6 }}>
@@ -641,7 +577,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Input */}
-            <div className="px-6 py-5 flex-shrink-0" style={{ background: "var(--surface)", borderTop: "1px solid var(--border-subtle)" }}>
+            <div className="px-4 py-4 flex-shrink-0" style={{ background: "var(--surface)", borderTop: "1px solid var(--border-subtle)" }}>
               {selectedConv.status === "resolved" ? (
                 <div className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm"
                   style={{ background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
@@ -649,9 +585,9 @@ export default function DashboardPage() {
                   Bu konuşma çözüldü olarak işaretlendi
                 </div>
               ) : (
-                <div className="flex items-end gap-3 rounded-2xl px-4 py-3"
+                <div className="flex items-end gap-2 rounded-2xl px-4 py-3"
                   style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
-                  <button className="mb-0.5" style={{ color: "var(--text-muted)" }}>
+                  <button className="mb-0.5 hidden sm:block" style={{ color: "var(--text-muted)" }}>
                     <Paperclip className="w-4 h-4" />
                   </button>
                   <textarea ref={textareaRef} value={messageInput}
@@ -659,7 +595,7 @@ export default function DashboardPage() {
                     placeholder={`${selectedConv.customerName}'e mesaj yaz...`}
                     rows={1} className="flex-1 resize-none text-sm bg-transparent"
                     style={{ color: "var(--text-primary)", height: 44, maxHeight: 120, lineHeight: "1.5", paddingTop: 10 }} />
-                  <button className="mb-0.5" style={{ color: "var(--text-muted)" }}>
+                  <button className="mb-0.5 hidden sm:block" style={{ color: "var(--text-muted)" }}>
                     <Smile className="w-4 h-4" />
                   </button>
                   <button onClick={sendMessage} disabled={!messageInput.trim() || sending}
@@ -675,7 +611,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
               )}
-              <div className="text-[10px] mt-2 text-center" style={{ color: "var(--text-muted)" }}>
+              <div className="text-[10px] mt-2 text-center hidden sm:block" style={{ color: "var(--text-muted)" }}>
                 Enter ile gönder · Shift+Enter yeni satır
               </div>
             </div>
@@ -694,9 +630,9 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* ===== RIGHT PANEL ===== */}
+      {/* ===== RIGHT PANEL — desktop only ===== */}
       {selectedConv && (
-        <aside className="w-72 flex-shrink-0 flex flex-col" style={{ background: "var(--surface)", borderLeft: "1px solid var(--border-subtle)" }}>
+        <aside className="hidden md:flex w-72 flex-shrink-0 flex-col" style={{ background: "var(--surface)", borderLeft: "1px solid var(--border-subtle)" }}>
           <div className="p-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div className="flex flex-col items-center text-center mb-4">
               <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg mb-3"
