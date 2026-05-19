@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { broadcastSSE } from "@/lib/sse";
 
-// Meta webhook doğrulaması (GET)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get("hub.mode");
@@ -15,7 +14,6 @@ export async function GET(req: NextRequest) {
   return new NextResponse("Forbidden", { status: 403 });
 }
 
-// Gelen mesajları işle (POST)
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
@@ -31,10 +29,19 @@ export async function POST(req: NextRequest) {
       // Instagram / Messenger
       for (const messaging of entry.messaging ?? []) {
         if (messaging.message?.text) {
+          const platform = body.object === "instagram" ? "instagram" : "messenger";
+          const token = platform === "instagram"
+            ? process.env.INSTAGRAM_ACCESS_TOKEN
+            : process.env.MESSENGER_ACCESS_TOKEN;
+
+          // Kullanıcı adı ve profil fotoğrafını Messenger API'den çek
+          const profile = await fetchUserProfile(messaging.sender.id, token ?? "");
+
           await handleMetaMessage({
-            platform: body.object === "instagram" ? "instagram" : "messenger",
+            platform,
             senderId: messaging.sender.id,
-            senderName: messaging.sender.id,
+            senderName: profile.name ?? messaging.sender.id,
+            senderPhoto: profile.profile_pic ?? null,
             text: messaging.message.text,
             platformMsgId: messaging.message.mid,
           });
@@ -46,6 +53,18 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+async function fetchUserProfile(userId: string, token: string): Promise<{ name?: string; profile_pic?: string }> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${userId}?fields=name,profile_pic&access_token=${token}`
+    );
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
 }
 
 async function handleWhatsAppMessage(value: {
@@ -65,6 +84,7 @@ async function handleWhatsAppMessage(value: {
       platform: "whatsapp",
       senderId: msg.from,
       senderName,
+      senderPhoto: null,
       text: msg.text.body,
       platformMsgId: msg.id,
     });
@@ -75,29 +95,30 @@ async function handleMetaMessage(params: {
   platform: string;
   senderId: string;
   senderName: string;
+  senderPhoto: string | null;
   text: string;
   platformMsgId?: string;
 }) {
-  const { platform, senderId, senderName, text, platformMsgId } = params;
+  const { platform, senderId, senderName, senderPhoto, text, platformMsgId } = params;
 
-  // Varolan konuşmayı bul veya yeni oluştur
   let conv = await prisma.conversation.findFirst({
     where: { platform, platformUserId: senderId },
   });
 
-  if (!conv) {
-    const initials = senderName
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const initials = senderName
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "?";
 
+  if (!conv) {
     conv = await prisma.conversation.create({
       data: {
         platform,
         customerName: senderName,
-        customerHandle: senderId,
+        customerHandle: senderPhoto ? senderName : senderId,
         customerAvatar: initials,
         platformUserId: senderId,
         status: "active",
@@ -106,14 +127,18 @@ async function handleMetaMessage(params: {
       },
     });
   } else {
+    // İsim güncellendiyse yenile
     await prisma.conversation.update({
       where: { id: conv.id },
       data: {
+        customerName: senderName !== senderId ? senderName : conv.customerName,
+        customerAvatar: senderName !== senderId ? initials : conv.customerAvatar,
         unreadCount: { increment: 1 },
         status: "active",
         updatedAt: new Date(),
       },
     });
+    conv = { ...conv, customerName: senderName, customerAvatar: initials };
   }
 
   const message = await prisma.message.create({
@@ -127,7 +152,6 @@ async function handleMetaMessage(params: {
     },
   });
 
-  // Gerçek zamanlı bildirim
   broadcastSSE("new_message", {
     conversationId: conv.id,
     message,
