@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     fetch("/api/logo").then(r => r.json()).then(data => {
-      if (data.url) setLogoUrl(data.url + "?t=" + Date.now());
+      if (data.dataUrl) setLogoUrl(data.dataUrl);
     });
   }, []);
 

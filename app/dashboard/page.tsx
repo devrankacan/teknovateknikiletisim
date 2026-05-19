@@ -106,7 +106,7 @@ export default function DashboardPage() {
   useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
   useEffect(() => {
     fetch("/api/logo").then(r => r.json()).then(data => {
-      if (data.url) setLogoUrl(data.url + "?t=" + Date.now());
+      if (data.dataUrl) setLogoUrl(data.dataUrl);
     });
   }, []);
 
@@ -116,13 +116,12 @@ export default function DashboardPage() {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;
-      const res = await fetch("/api/logo", {
+      setLogoUrl(base64);
+      await fetch("/api/logo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ base64 }),
       });
-      const data = await res.json();
-      if (data.url) setLogoUrl(data.url + "?t=" + Date.now());
     };
     reader.readAsDataURL(file);
   }
