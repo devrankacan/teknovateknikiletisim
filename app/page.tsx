@@ -58,8 +58,7 @@ export default function LoginPage() {
         {/* Logo area */}
         <div className="mb-8">
           {logoUrl ? (
-            <div className="w-full rounded-2xl overflow-hidden flex items-center justify-center"
-              style={{ height: 180, background: "rgba(15,23,41,0.8)", border: "1px solid rgba(37,99,235,0.2)" }}>
+            <div style={{ width: "100%", height: 180, borderRadius: 16, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,41,0.8)", border: "1px solid rgba(37,99,235,0.2)", marginBottom: 8 }}>
               <img src={logoUrl} alt="logo" style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain" }} />
             </div>
           ) : (
