@@ -13,8 +13,9 @@ export default function LoginPage() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("company_logo");
-    if (saved) setLogoUrl(saved);
+    fetch("/api/logo").then(r => r.json()).then(data => {
+      if (data.url) setLogoUrl(data.url + "?t=" + Date.now());
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
