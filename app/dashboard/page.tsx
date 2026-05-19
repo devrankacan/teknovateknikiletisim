@@ -7,7 +7,7 @@ import { formatTime, formatFullTime } from "@/lib/auth";
 import PlatformIcon from "@/components/PlatformIcon";
 import {
   Search, Send, LogOut, BarChart2, MessageSquare, CheckCheck,
-  Clock, MoreVertical, Bell, Users, X, Check, Paperclip, Smile,
+  Clock, MoreVertical, Bell, Users, X, Check, Paperclip, Smile, ChevronDown, Camera,
 } from "lucide-react";
 
 type DBMessage = {
@@ -64,10 +64,40 @@ const platformColor: Record<string, string> = {
 export default function DashboardPage() {
   const router = useRouter();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [showPlatformDropdown, setShowPlatformDropdown] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("company_logo");
+    if (saved) setLogoUrl(saved);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowPlatformDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setLogoUrl(url);
+      localStorage.setItem("company_logo", url);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const [conversations, setConversations] = useState<DBConversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<DBConversation | null>(null);
@@ -84,6 +114,7 @@ export default function DashboardPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sseRef = useRef<EventSource | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Auth check
   useEffect(() => {
@@ -236,8 +267,21 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white"
-              style={{ background: "linear-gradient(135deg, var(--accent), #60A5FA)" }}>TT</div>
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              className="relative w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 group"
+              style={{ background: logoUrl ? "transparent" : "linear-gradient(135deg, var(--accent), #60A5FA)" }}
+              title="Logo yükle"
+            >
+              {logoUrl
+                ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
+                : <span className="font-bold text-sm text-white">TT</span>
+              }
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                <Camera className="w-3.5 h-3.5 text-white" />
+              </div>
+            </button>
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
             <div>
               <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Teknovateknik</div>
               <div className="text-xs" style={{ color: "var(--text-muted)" }}>İletişim Merkezi</div>
@@ -320,19 +364,88 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Platform filter */}
-        <div className="px-4 pb-3 flex gap-1.5 flex-wrap">
-          {PLATFORM_FILTERS.map((f) => (
-            <button key={f.value} onClick={() => setPlatformFilter(f.value)}
-              className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-              style={{
-                background: platformFilter === f.value ? "var(--accent-light)" : "var(--surface-raised)",
-                color: platformFilter === f.value ? "var(--accent)" : "var(--text-secondary)",
-                border: `1px solid ${platformFilter === f.value ? "rgba(37,99,235,0.4)" : "var(--border)"}`,
-              }}>
-              {f.label}
-            </button>
-          ))}
+        {/* Platform filter dropdown */}
+        <div className="px-4 pb-3 relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowPlatformDropdown((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+            style={{ background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+          >
+            <div className="flex items-center gap-2">
+              {platformFilter === "all" ? (
+                <>
+                  <div className="flex -space-x-1">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    </div>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)", border: "1px solid rgba(225,48,108,0.3)" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
+                    </div>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)", border: "1px solid rgba(0,132,255,0.3)" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg>
+                    </div>
+                  </div>
+                  <span>Tüm Platformlar</span>
+                </>
+              ) : platformFilter === "whatsapp" ? (
+                <>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  </div>
+                  <span style={{ color: "#25D366" }}>WhatsApp</span>
+                </>
+              ) : platformFilter === "instagram" ? (
+                <>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)", border: "1px solid rgba(225,48,108,0.3)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg>
+                  </div>
+                  <span style={{ color: "#E1306C" }}>Instagram</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)", border: "1px solid rgba(0,132,255,0.3)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg>
+                  </div>
+                  <span style={{ color: "#0084FF" }}>Messenger</span>
+                </>
+              )}
+            </div>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showPlatformDropdown ? "rotate-180" : ""}`} style={{ color: "var(--text-muted)" }} />
+          </button>
+
+          {showPlatformDropdown && (
+            <div className="absolute left-4 right-4 z-50 mt-1 rounded-xl overflow-hidden"
+              style={{ background: "var(--surface-raised)", border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}>
+              {[
+                { value: "all" as const, label: "Tüm Platformlar", color: "var(--text-primary)", icon: (
+                  <div className="flex -space-x-1">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg></div>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)" }}><svg width="10" height="10" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg></div>
+                  </div>
+                ) },
+                { value: "whatsapp" as const, label: "WhatsApp", color: "#25D366", icon: <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div> },
+                { value: "instagram" as const, label: "Instagram", color: "#E1306C", icon: <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(225,48,108,0.15)", border: "1px solid rgba(225,48,108,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E1306C" strokeWidth="2.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#E1306C" stroke="none"/></svg></div> },
+                { value: "messenger" as const, label: "Messenger", color: "#0084FF", icon: <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(0,132,255,0.15)", border: "1px solid rgba(0,132,255,0.3)" }}><svg width="16" height="16" viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.671V24l4.088-2.242c1.092.301 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.1l3.131 3.26 5.887-3.26-6.559 6.863z"/></svg></div> },
+              ].map((opt) => (
+                <button key={opt.value}
+                  onClick={() => { setPlatformFilter(opt.value); setShowPlatformDropdown(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors text-left"
+                  style={{
+                    background: platformFilter === opt.value ? "var(--accent-light)" : "transparent",
+                    color: platformFilter === opt.value ? "var(--accent)" : opt.color,
+                    borderLeft: platformFilter === opt.value ? "2px solid var(--accent)" : "2px solid transparent",
+                  }}
+                  onMouseEnter={(e) => { if (platformFilter !== opt.value) (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)"; }}
+                  onMouseLeave={(e) => { if (platformFilter !== opt.value) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >
+                  {opt.icon}
+                  {opt.label}
+                  {platformFilter === opt.value && <Check className="w-3.5 h-3.5 ml-auto" style={{ color: "var(--accent)" }} />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Status filter */}
