@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authenticate } from "@/lib/auth";
 import { Eye, EyeOff, Lock, User, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -17,9 +16,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    if (authenticate(username, password)) {
-      sessionStorage.setItem("auth", "true");
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      sessionStorage.setItem("current_user", JSON.stringify(data.user));
       router.push("/dashboard");
     } else {
       setError("Kullanıcı adı veya şifre hatalı.");
