@@ -265,30 +265,34 @@ export default function DashboardPage() {
           display: isNarrow && showMobileChat ? "none" : "flex",
         }}
       >
-        {/* Header — logo + actions */}
-        <div className="flex items-center justify-between px-4 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          {/* Logo */}
+        {/* Header — tam genişlik logo + altında ikonlar */}
+        <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          {/* Logo alanı — tam genişlik */}
           <button
             onClick={() => logoInputRef.current?.click()}
-            className="relative rounded-2xl overflow-hidden flex-shrink-0 group"
+            className="relative w-full group overflow-hidden"
             style={{
-              width: 52, height: 52,
-              background: logoUrl ? "transparent" : "linear-gradient(135deg, var(--accent), #60A5FA)",
+              height: 140,
+              background: logoUrl ? "transparent" : "linear-gradient(135deg, var(--accent) 0%, #60A5FA 100%)",
+              display: "flex", alignItems: "center", justifyContent: "center",
             }}
             title="Logo yüklemek için tıkla"
           >
             {logoUrl
-              ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <span className="font-bold text-white" style={{ fontSize: 16 }}>TT</span>
+              ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: 12 }} />
+              : <span className="font-bold text-white select-none" style={{ fontSize: 48, letterSpacing: 4, opacity: 0.9 }}>TT</span>
             }
-            <div className="absolute inset-0 flex items-center justify-center rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,0.45)" }}>
-              <Camera style={{ width: 16, height: 16, color: "white" }} />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,0.4)" }}>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(4px)" }}>
+                <Camera style={{ width: 18, height: 18, color: "white" }} />
+                <span className="text-white text-sm font-medium">Logo Yükle</span>
+              </div>
             </div>
           </button>
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
 
-          {/* Action icons — vertical stack */}
-          <div className="flex flex-col items-center gap-1">
+          {/* Action icons — yatay sıra */}
+          <div className="flex items-center justify-around px-2 py-2">
             <button onClick={() => setShowStats(!showStats)} className="p-2 rounded-lg"
               style={{ color: showStats ? "var(--accent)" : "var(--text-muted)" }} title="İstatistikler">
               <BarChart2 style={{ width: 18, height: 18 }} />
