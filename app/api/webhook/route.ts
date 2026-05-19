@@ -16,12 +16,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
+  console.log("[webhook] POST alındı:", JSON.stringify(body).slice(0, 300));
 
   try {
     for (const entry of body.entry ?? []) {
       // WhatsApp
       for (const change of entry.changes ?? []) {
         if (change.field === "messages") {
+          console.log("[webhook] WhatsApp mesajı işleniyor");
           await handleWhatsAppMessage(change.value);
         }
       }
@@ -30,11 +32,11 @@ export async function POST(req: NextRequest) {
       for (const messaging of entry.messaging ?? []) {
         if (messaging.message?.text) {
           const platform = body.object === "instagram" ? "instagram" : "messenger";
+          console.log(`[webhook] ${platform} mesajı işleniyor, sender: ${messaging.sender.id}`);
           const token = platform === "instagram"
             ? process.env.INSTAGRAM_ACCESS_TOKEN
             : process.env.MESSENGER_ACCESS_TOKEN;
 
-          // Kullanıcı adı ve profil fotoğrafını Messenger API'den çek
           const profile = await fetchUserProfile(messaging.sender.id, token ?? "");
 
           await handleMetaMessage({
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (err) {
-    console.error("Webhook işleme hatası:", err);
+    console.error("[webhook] İşleme hatası:", err);
   }
 
   return NextResponse.json({ ok: true });
