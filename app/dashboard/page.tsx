@@ -63,6 +63,12 @@ const platformColor: Record<string, string> = {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
   const [conversations, setConversations] = useState<DBConversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<DBConversation | null>(null);
   const [messages, setMessages] = useState<DBMessage[]>([]);
@@ -224,29 +230,53 @@ export default function DashboardPage() {
   const totalUnread = conversations.reduce((s, c) => s + c.unreadCount, 0);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#0f0f13" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
       {/* ===== LEFT SIDEBAR ===== */}
-      <aside className="flex flex-col w-80 flex-shrink-0" style={{ background: "#13131f", borderRight: "1px solid #1e1e2a" }}>
+      <aside className="flex flex-col w-96 flex-shrink-0" style={{ background: "var(--surface)", borderRight: "1px solid var(--border-subtle)" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #1e1e2a" }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white"
-              style={{ background: "linear-gradient(135deg, #6c63ff, #a855f7)" }}>TT</div>
+              style={{ background: "linear-gradient(135deg, var(--accent), #60A5FA)" }}>TT</div>
             <div>
-              <div className="font-semibold text-sm" style={{ color: "#f0f0f5" }}>Teknovateknik</div>
-              <div className="text-xs" style={{ color: "#555570" }}>İletişim Merkezi</div>
+              <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Teknovateknik</div>
+              <div className="text-xs" style={{ color: "var(--text-muted)" }}>İletişim Merkezi</div>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => setShowStats(!showStats)} className="p-2 rounded-lg"
-              style={{ color: showStats ? "#6c63ff" : "#555570" }} title="İstatistikler">
+              style={{ color: showStats ? "var(--accent)" : "var(--text-muted)" }} title="İstatistikler">
               <BarChart2 className="w-4 h-4" />
             </button>
-            <button className="relative p-2 rounded-lg" style={{ color: "#555570" }}>
+            <button className="relative p-2 rounded-lg" style={{ color: "var(--text-muted)" }}>
               <Bell className="w-4 h-4" />
               {totalUnread > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
-                  style={{ background: "#6c63ff", padding: "0 3px" }}>{totalUnread}</span>
+                  style={{ background: "var(--accent)", padding: "0 3px" }}>{totalUnread}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: "var(--text-muted)" }}
+              title={theme === "dark" ? "Gündüz modu" : "Gece modu"}
+            >
+              {theme === "dark" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/>
+                  <line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
               )}
             </button>
           </div>
@@ -254,19 +284,19 @@ export default function DashboardPage() {
 
         {/* Stats */}
         {showStats && stats && (
-          <div className="px-4 py-3 grid grid-cols-2 gap-2" style={{ borderBottom: "1px solid #1e1e2a" }}>
+          <div className="px-4 py-3 grid grid-cols-2 gap-2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             {[
-              { label: "Toplam Mesaj", value: stats.totalMessages, icon: <MessageSquare className="w-3.5 h-3.5" />, color: "#6c63ff" },
+              { label: "Toplam Mesaj", value: stats.totalMessages, icon: <MessageSquare className="w-3.5 h-3.5" />, color: "var(--accent)" },
               { label: "Aktif", value: stats.activeConversations, icon: <Users className="w-3.5 h-3.5" />, color: "#25D366" },
               { label: "Bugün Çözüldü", value: stats.resolvedToday, icon: <CheckCheck className="w-3.5 h-3.5" />, color: "#f59e0b" },
               { label: "Ort. Yanıt", value: stats.avgResponseTime, icon: <Clock className="w-3.5 h-3.5" />, color: "#0084FF" },
             ].map((s) => (
-              <div key={s.label} className="p-2.5 rounded-xl" style={{ background: "#1e1e28", border: "1px solid #2a2a3a" }}>
+              <div key={s.label} className="p-2.5 rounded-xl" style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
                 <div className="flex items-center gap-1.5 mb-1" style={{ color: s.color }}>
                   {s.icon}
-                  <span className="text-[10px]" style={{ color: "#555570" }}>{s.label}</span>
+                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{s.label}</span>
                 </div>
-                <div className="font-bold text-base" style={{ color: "#f0f0f5" }}>{s.value}</div>
+                <div className="font-bold text-base" style={{ color: "var(--text-primary)" }}>{s.value}</div>
               </div>
             ))}
           </div>
@@ -275,15 +305,15 @@ export default function DashboardPage() {
         {/* Search */}
         <div className="px-4 pt-4 pb-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "#555570" }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
             <input type="text" placeholder="Konuşma ara..." value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-8 py-2.5 rounded-xl text-sm"
-              style={{ background: "#0f0f13", border: "1px solid #2a2a3a", color: "#f0f0f5" }}
-              onFocus={(e) => (e.target.style.borderColor = "#6c63ff")}
-              onBlur={(e) => (e.target.style.borderColor = "#2a2a3a")} />
+              style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border)")} />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#555570" }}>
+              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }}>
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -296,9 +326,9 @@ export default function DashboardPage() {
             <button key={f.value} onClick={() => setPlatformFilter(f.value)}
               className="px-3 py-1 rounded-full text-xs font-medium transition-all"
               style={{
-                background: platformFilter === f.value ? "rgba(108,99,255,0.2)" : "#1e1e28",
-                color: platformFilter === f.value ? "#6c63ff" : "#8888a4",
-                border: `1px solid ${platformFilter === f.value ? "rgba(108,99,255,0.4)" : "#2a2a3a"}`,
+                background: platformFilter === f.value ? "var(--accent-light)" : "var(--surface-raised)",
+                color: platformFilter === f.value ? "var(--accent)" : "var(--text-secondary)",
+                border: `1px solid ${platformFilter === f.value ? "rgba(37,99,235,0.4)" : "var(--border)"}`,
               }}>
               {f.label}
             </button>
@@ -311,9 +341,9 @@ export default function DashboardPage() {
             <button key={f.value} onClick={() => setStatusFilter(f.value)}
               className="px-2.5 py-1 rounded-full text-xs font-medium"
               style={{
-                background: statusFilter === f.value ? "rgba(108,99,255,0.15)" : "transparent",
-                color: statusFilter === f.value ? "#6c63ff" : "#555570",
-                border: `1px solid ${statusFilter === f.value ? "rgba(108,99,255,0.3)" : "transparent"}`,
+                background: statusFilter === f.value ? "var(--accent-light)" : "transparent",
+                color: statusFilter === f.value ? "var(--accent)" : "var(--text-muted)",
+                border: `1px solid ${statusFilter === f.value ? "rgba(37,99,235,0.3)" : "transparent"}`,
               }}>
               {f.label}
             </button>
@@ -324,23 +354,23 @@ export default function DashboardPage() {
         <div className="flex-1 overflow-y-auto">
           {loadingConvs ? (
             <div className="flex items-center justify-center h-24">
-              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "#555570" }}>
+              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--text-muted)" }}>
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
           ) : conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-xs" style={{ color: "#555570" }}>
+            <div className="flex flex-col items-center justify-center h-32 text-xs" style={{ color: "var(--text-muted)" }}>
               <MessageSquare className="w-8 h-8 mb-2 opacity-30" />
               Konuşma bulunamadı
             </div>
           ) : (
             conversations.map((conv) => (
               <button key={conv.id} onClick={() => selectConversation(conv)}
-                className="w-full text-left px-4 py-3.5 transition-all relative"
+                className="w-full text-left px-5 py-4 transition-all relative"
                 style={{
-                  background: selectedConv?.id === conv.id ? "rgba(108,99,255,0.08)" : "transparent",
-                  borderLeft: selectedConv?.id === conv.id ? "2px solid #6c63ff" : "2px solid transparent",
+                  background: selectedConv?.id === conv.id ? "var(--accent-light)" : "transparent",
+                  borderLeft: selectedConv?.id === conv.id ? "2px solid var(--accent)" : "2px solid transparent",
                 }}>
                 <div className="flex items-start gap-3">
                   <div className="relative flex-shrink-0">
@@ -353,35 +383,35 @@ export default function DashboardPage() {
                       {conv.customerAvatar}
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full"
-                      style={{ background: platformColor[conv.platform], border: "2px solid #13131f" }} />
+                      style={{ background: platformColor[conv.platform], border: "2px solid var(--surface)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-sm truncate" style={{ color: "#f0f0f5" }}>
+                      <span className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
                         {conv.customerName}
                       </span>
-                      <span className="text-[10px] flex-shrink-0 ml-2" style={{ color: "#555570" }}>
+                      <span className="text-[10px] flex-shrink-0 ml-2" style={{ color: "var(--text-muted)" }}>
                         {formatTime(new Date(conv.updatedAt))}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs truncate pr-2" style={{ color: "#8888a4" }}>
+                      <span className="text-xs truncate pr-2" style={{ color: "var(--text-secondary)" }}>
                         {conv.messages?.[0]?.content ?? "—"}
                       </span>
                       {conv.unreadCount > 0 ? (
                         <span className="flex-shrink-0 min-w-5 h-5 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
-                          style={{ background: "#6c63ff", padding: "0 5px" }}>
+                          style={{ background: "var(--accent)", padding: "0 5px" }}>
                           {conv.unreadCount}
                         </span>
                       ) : conv.status === "resolved" ? (
-                        <CheckCheck className="flex-shrink-0 w-3.5 h-3.5" style={{ color: "#555570" }} />
+                        <CheckCheck className="flex-shrink-0 w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
                       ) : null}
                     </div>
                     <div className="mt-1">
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                         style={{
-                          background: conv.status === "active" ? "rgba(34,197,94,0.1)" : conv.status === "pending" ? "rgba(245,158,11,0.1)" : "rgba(85,85,112,0.15)",
-                          color: conv.status === "active" ? "#22c55e" : conv.status === "pending" ? "#f59e0b" : "#555570",
+                          background: conv.status === "active" ? "rgba(34,197,94,0.1)" : conv.status === "pending" ? "rgba(245,158,11,0.1)" : "rgba(61,82,120,0.15)",
+                          color: conv.status === "active" ? "#22c55e" : conv.status === "pending" ? "#f59e0b" : "var(--text-muted)",
                         }}>
                         {conv.status === "active" ? "Aktif" : conv.status === "pending" ? "Bekliyor" : "Çözüldü"}
                       </span>
@@ -394,21 +424,21 @@ export default function DashboardPage() {
         </div>
 
         {/* User footer */}
-        <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "1px solid #1e1e2a" }}>
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-              style={{ background: "linear-gradient(135deg, #6c63ff, #a855f7)" }}>
+              style={{ background: "linear-gradient(135deg, var(--accent), #60A5FA)" }}>
               {currentUser?.avatar ?? "TT"}
             </div>
             <div>
-              <div className="text-xs font-semibold" style={{ color: "#f0f0f5" }}>{currentUser?.name ?? "Teknovateknik"}</div>
+              <div className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{currentUser?.name ?? "Teknovateknik"}</div>
               <div className="flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />
-                <span className="text-[10px]" style={{ color: "#555570" }}>Çevrimiçi</span>
+                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>Çevrimiçi</span>
               </div>
             </div>
           </div>
-          <button onClick={logout} className="p-2 rounded-lg" style={{ color: "#555570" }} title="Çıkış yap">
+          <button onClick={logout} className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }} title="Çıkış yap">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
@@ -420,7 +450,7 @@ export default function DashboardPage() {
           <>
             {/* Chat header */}
             <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
-              style={{ background: "#13131f", borderBottom: "1px solid #1e1e2a" }}>
+              style={{ background: "var(--surface)", borderBottom: "1px solid var(--border-subtle)" }}>
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
@@ -432,14 +462,14 @@ export default function DashboardPage() {
                     {selectedConv.customerAvatar}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full"
-                    style={{ background: platformColor[selectedConv.platform], border: "2px solid #13131f" }} />
+                    style={{ background: platformColor[selectedConv.platform], border: "2px solid var(--surface)" }} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold" style={{ color: "#f0f0f5" }}>{selectedConv.customerName}</span>
+                    <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{selectedConv.customerName}</span>
                     <PlatformIcon platform={selectedConv.platform} size={14} showLabel />
                   </div>
-                  <div className="text-xs" style={{ color: "#8888a4" }}>{selectedConv.customerHandle}</div>
+                  <div className="text-xs" style={{ color: "var(--text-secondary)" }}>{selectedConv.customerHandle}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -451,21 +481,21 @@ export default function DashboardPage() {
                     Çözüldü İşaretle
                   </button>
                 )}
-                <button className="p-2 rounded-lg" style={{ color: "#555570" }}>
+                <button className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }}>
                   <MoreVertical className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4" style={{ background: "#0f0f13" }}>
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" style={{ background: "var(--bg)" }}>
               <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px" style={{ background: "#1e1e2a" }} />
+                <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
                 <span className="text-[10px] px-3 py-1 rounded-full"
-                  style={{ background: "#16161d", color: "#555570", border: "1px solid #1e1e2a" }}>
+                  style={{ background: "var(--surface)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
                   Konuşma
                 </span>
-                <div className="flex-1 h-px" style={{ background: "#1e1e2a" }} />
+                <div className="flex-1 h-px" style={{ background: "var(--border-subtle)" }} />
               </div>
 
               {messages.map((msg) => (
@@ -477,18 +507,18 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div className={`max-w-md flex flex-col ${msg.sender === "agent" ? "items-end" : "items-start"}`}>
-                    <div className="px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
+                    <div className="px-5 py-3 rounded-2xl text-sm leading-relaxed"
                       style={msg.sender === "agent"
-                        ? { background: "linear-gradient(135deg, #6c63ff, #7c5cbf)", color: "white", borderBottomRightRadius: 6, boxShadow: "0 2px 8px rgba(108,99,255,0.25)" }
-                        : { background: "#1e1e28", color: "#f0f0f5", border: "1px solid #2a2a3a", borderBottomLeftRadius: 6 }}>
+                        ? { background: "linear-gradient(135deg, var(--accent), #1D4ED8)", color: "white", borderBottomRightRadius: 6, boxShadow: "0 2px 8px rgba(37,99,235,0.25)" }
+                        : { background: "var(--surface-raised)", color: "var(--text-primary)", border: "1px solid var(--border)", borderBottomLeftRadius: 6 }}>
                       {msg.content}
                     </div>
                     <div className="flex items-center gap-1 mt-1 px-1">
-                      <span className="text-[10px]" style={{ color: "#555570" }}>
+                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
                         {formatFullTime(new Date(msg.createdAt))}
                       </span>
                       {msg.sender === "agent" && (
-                        <CheckCheck className="w-3 h-3" style={{ color: msg.status === "read" ? "#6c63ff" : "#555570" }} />
+                        <CheckCheck className="w-3 h-3" style={{ color: msg.status === "read" ? "var(--accent)" : "var(--text-muted)" }} />
                       )}
                     </div>
                   </div>
@@ -498,33 +528,33 @@ export default function DashboardPage() {
             </div>
 
             {/* Input */}
-            <div className="px-6 py-4 flex-shrink-0" style={{ background: "#13131f", borderTop: "1px solid #1e1e2a" }}>
+            <div className="px-6 py-5 flex-shrink-0" style={{ background: "var(--surface)", borderTop: "1px solid var(--border-subtle)" }}>
               {selectedConv.status === "resolved" ? (
                 <div className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm"
-                  style={{ background: "#1e1e28", color: "#555570", border: "1px solid #2a2a3a" }}>
+                  style={{ background: "var(--surface-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
                   <CheckCheck className="w-4 h-4" />
                   Bu konuşma çözüldü olarak işaretlendi
                 </div>
               ) : (
                 <div className="flex items-end gap-3 rounded-2xl px-4 py-3"
-                  style={{ background: "#0f0f13", border: "1px solid #2a2a3a" }}>
-                  <button className="mb-0.5" style={{ color: "#555570" }}>
+                  style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
+                  <button className="mb-0.5" style={{ color: "var(--text-muted)" }}>
                     <Paperclip className="w-4 h-4" />
                   </button>
                   <textarea ref={textareaRef} value={messageInput}
                     onChange={handleTextareaChange} onKeyDown={handleKeyDown}
                     placeholder={`${selectedConv.customerName}'e mesaj yaz...`}
                     rows={1} className="flex-1 resize-none text-sm bg-transparent"
-                    style={{ color: "#f0f0f5", height: 44, maxHeight: 120, lineHeight: "1.5", paddingTop: 10 }} />
-                  <button className="mb-0.5" style={{ color: "#555570" }}>
+                    style={{ color: "var(--text-primary)", height: 44, maxHeight: 120, lineHeight: "1.5", paddingTop: 10 }} />
+                  <button className="mb-0.5" style={{ color: "var(--text-muted)" }}>
                     <Smile className="w-4 h-4" />
                   </button>
                   <button onClick={sendMessage} disabled={!messageInput.trim() || sending}
                     className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
                     style={{
-                      background: messageInput.trim() && !sending ? "linear-gradient(135deg, #6c63ff, #7c5cbf)" : "#1e1e28",
-                      color: messageInput.trim() && !sending ? "white" : "#555570",
-                      boxShadow: messageInput.trim() ? "0 2px 12px rgba(108,99,255,0.35)" : "none",
+                      background: messageInput.trim() && !sending ? "linear-gradient(135deg, var(--accent), #1D4ED8)" : "var(--surface-raised)",
+                      color: messageInput.trim() && !sending ? "white" : "var(--text-muted)",
+                      boxShadow: messageInput.trim() ? "0 2px 12px rgba(37,99,235,0.35)" : "none",
                     }}>
                     {sending
                       ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
@@ -532,19 +562,19 @@ export default function DashboardPage() {
                   </button>
                 </div>
               )}
-              <div className="text-[10px] mt-2 text-center" style={{ color: "#555570" }}>
+              <div className="text-[10px] mt-2 text-center" style={{ color: "var(--text-muted)" }}>
                 Enter ile gönder · Shift+Enter yeni satır
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center flex-col gap-4" style={{ color: "#555570" }}>
+          <div className="flex-1 flex items-center justify-center flex-col gap-4" style={{ color: "var(--text-muted)" }}>
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)" }}>
-              <MessageSquare className="w-10 h-10" style={{ color: "#6c63ff", opacity: 0.5 }} />
+              style={{ background: "var(--accent-light)", border: "1px solid rgba(37,99,235,0.15)" }}>
+              <MessageSquare className="w-10 h-10" style={{ color: "var(--accent)", opacity: 0.5 }} />
             </div>
             <div className="text-center">
-              <p className="font-medium mb-1" style={{ color: "#8888a4" }}>Konuşma seçin</p>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Konuşma seçin</p>
               <p className="text-sm">Sol taraftan bir konuşma seçerek başlayın</p>
             </div>
           </div>
@@ -553,8 +583,8 @@ export default function DashboardPage() {
 
       {/* ===== RIGHT PANEL ===== */}
       {selectedConv && (
-        <aside className="w-64 flex-shrink-0 flex flex-col" style={{ background: "#13131f", borderLeft: "1px solid #1e1e2a" }}>
-          <div className="p-5" style={{ borderBottom: "1px solid #1e1e2a" }}>
+        <aside className="w-72 flex-shrink-0 flex flex-col" style={{ background: "var(--surface)", borderLeft: "1px solid var(--border-subtle)" }}>
+          <div className="p-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <div className="flex flex-col items-center text-center mb-4">
               <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg mb-3"
                 style={{
@@ -564,25 +594,25 @@ export default function DashboardPage() {
                 }}>
                 {selectedConv.customerAvatar}
               </div>
-              <div className="font-semibold text-sm mb-0.5" style={{ color: "#f0f0f5" }}>{selectedConv.customerName}</div>
-              <div className="text-xs mb-3" style={{ color: "#8888a4" }}>{selectedConv.customerHandle}</div>
+              <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text-primary)" }}>{selectedConv.customerName}</div>
+              <div className="text-xs mb-3" style={{ color: "var(--text-secondary)" }}>{selectedConv.customerHandle}</div>
               <PlatformIcon platform={selectedConv.platform} size={14} showLabel />
             </div>
             <div className="space-y-2">
               <InfoRow label="Platform" value={selectedConv.platform.charAt(0).toUpperCase() + selectedConv.platform.slice(1)} />
               <InfoRow label="Durum"
                 value={selectedConv.status === "active" ? "Aktif" : selectedConv.status === "pending" ? "Bekliyor" : "Çözüldü"}
-                valueColor={selectedConv.status === "active" ? "#22c55e" : selectedConv.status === "pending" ? "#f59e0b" : "#555570"} />
+                valueColor={selectedConv.status === "active" ? "#22c55e" : selectedConv.status === "pending" ? "#f59e0b" : "var(--text-muted)"} />
               <InfoRow label="Mesaj Sayısı" value={String(messages.length)} />
             </div>
           </div>
 
-          <div className="p-5" style={{ borderBottom: "1px solid #1e1e2a" }}>
-            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#555570" }}>Etiketler</div>
+          <div className="p-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Etiketler</div>
             <div className="flex flex-wrap gap-1.5">
               {(JSON.parse(selectedConv.tags || "[]") as string[]).map((tag) => (
                 <span key={tag} className="text-xs px-2.5 py-1 rounded-full"
-                  style={{ background: "rgba(108,99,255,0.12)", color: "#6c63ff", border: "1px solid rgba(108,99,255,0.2)" }}>
+                  style={{ background: "var(--accent-light)", color: "var(--accent)", border: "1px solid rgba(37,99,235,0.2)" }}>
                   {tag}
                 </span>
               ))}
@@ -590,7 +620,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="p-5 flex-1">
-            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#555570" }}>Hızlı Yanıtlar</div>
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--text-muted)" }}>Hızlı Yanıtlar</div>
             <div className="space-y-2">
               {[
                 "Merhaba! Size nasıl yardımcı olabiliriz?",
@@ -600,16 +630,16 @@ export default function DashboardPage() {
               ].map((reply) => (
                 <button key={reply} onClick={() => setMessageInput(reply)}
                   className="w-full text-left text-xs px-3 py-2.5 rounded-xl transition-all"
-                  style={{ background: "#1e1e28", border: "1px solid #2a2a3a", color: "#8888a4" }}
+                  style={{ background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "#252532";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(108,99,255,0.3)";
-                    (e.currentTarget as HTMLElement).style.color = "#f0f0f5";
+                    (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(37,99,235,0.3)";
+                    (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "#1e1e28";
-                    (e.currentTarget as HTMLElement).style.borderColor = "#2a2a3a";
-                    (e.currentTarget as HTMLElement).style.color = "#8888a4";
+                    (e.currentTarget as HTMLElement).style.background = "var(--surface-raised)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                    (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
                   }}>
                   {reply.length > 60 ? reply.slice(0, 60) + "…" : reply}
                 </button>
@@ -625,8 +655,8 @@ export default function DashboardPage() {
 function InfoRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
     <div className="flex items-center justify-between py-1">
-      <span className="text-xs" style={{ color: "#555570" }}>{label}</span>
-      <span className="text-xs font-medium" style={{ color: valueColor ?? "#8888a4" }}>{value}</span>
+      <span className="text-xs" style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span className="text-xs font-medium" style={{ color: valueColor ?? "var(--text-secondary)" }}>{value}</span>
     </div>
   );
 }
