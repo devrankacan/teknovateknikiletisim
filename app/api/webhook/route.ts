@@ -39,10 +39,17 @@ export async function POST(req: NextRequest) {
 
           const profile = await fetchUserProfile(messaging.sender.id, token ?? "");
 
+          // Eğer isim gelemediyse (sadece numara) platform bazlı bir isim üret
+          const rawName = profile.name ?? "";
+          const isNumericId = /^\d+$/.test(rawName) || rawName === "";
+          const senderName = isNumericId
+            ? (platform === "instagram" ? `Instagram Kullanıcısı` : `Messenger Kullanıcısı`)
+            : rawName;
+
           await handleMetaMessage({
             platform,
             senderId: messaging.sender.id,
-            senderName: profile.name ?? messaging.sender.id,
+            senderName,
             senderPhoto: profile.profile_pic ?? null,
             text: messaging.message.text,
             platformMsgId: messaging.message.mid,
