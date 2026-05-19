@@ -200,10 +200,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Hint */}
-          <div className="mt-6 pt-5 text-xs text-center" style={{ borderTop: "1px solid #131E30", color: "#3D5278" }}>
-            Demo: <span style={{ color: "#7A90B8" }}>admin</span> / <span style={{ color: "#7A90B8" }}>Tknv@2026!Sec</span>
-          </div>
         </div>
 
         <p className="text-center text-xs mt-6" style={{ color: "#3D5278" }}>
