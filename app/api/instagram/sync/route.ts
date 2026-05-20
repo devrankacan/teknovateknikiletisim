@@ -60,12 +60,21 @@ export async function POST(req: NextRequest) {
     if (!firstMsg?.message) { console.log("[instagram-sync] firstMsg yok, atlanıyor"); continue; }
 
     // Zaten var mı?
-    const existing = await prisma.conversation.findFirst({
-      where: { platform: "instagram", platformUserId: customer.id },
-    });
+    let existing;
+    try {
+      existing = await prisma.conversation.findFirst({
+        where: { platform: "instagram", platformUserId: customer.id },
+      });
+      console.log("[instagram-sync] existing:", existing?.id ?? "yok");
+    } catch (e) {
+      console.error("[instagram-sync] findFirst hatası:", e);
+      continue;
+    }
 
+    try {
     if (!existing) {
       const customerName = customer.name || customer.username || `Instagram Kullanıcısı`;
+      console.log("[instagram-sync] yeni konuşma oluşturuluyor:", customerName);
       const initials = customerName
         .split(" ")
         .filter(Boolean)
@@ -135,6 +144,9 @@ export async function POST(req: NextRequest) {
         });
         newCount++;
       }
+    }
+    } catch (e) {
+      console.error("[instagram-sync] konuşma işleme hatası:", String(e));
     }
   }
 
