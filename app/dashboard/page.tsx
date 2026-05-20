@@ -194,6 +194,14 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
+  // Instagram mesaj isteklerini otomatik çek (30s)
+  useEffect(() => {
+    const poll = () => fetch("/api/instagram/sync", { method: "POST" }).catch(() => {});
+    poll();
+    const id = setInterval(poll, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     if (!showStats) return;
     fetch("/api/stats").then((r) => r.json()).then(setStats);
