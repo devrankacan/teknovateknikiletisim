@@ -15,6 +15,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Instagram token ayarlı değil" }, { status: 500 });
   }
 
+  // Instagram Business Account ID'sini al (Facebook Page ID'sinden farklı)
+  const igAccountRes = await fetch(`${GRAPH}/${pageId}?fields=instagram_business_account&access_token=${token}`);
+  const igAccountData = igAccountRes.ok ? await igAccountRes.json() : {};
+  const igUserId: string = igAccountData.instagram_business_account?.id ?? pageId;
+  console.log("[instagram-sync] igUserId:", igUserId, "pageId:", pageId);
+
   const fields = "participants,messages{message,from,created_time,id}";
   const baseUrl = `${GRAPH}/${pageId}/conversations?platform=instagram&fields=${fields}&access_token=${token}`;
 
@@ -40,8 +46,8 @@ export async function POST(req: NextRequest) {
 
   for (const conv of conversations) {
     const participants: { id: string; name: string }[] = conv.participants?.data ?? [];
-    console.log("[instagram-sync] conv id:", conv.id, "folder:", conv._folder, "participants:", JSON.stringify(participants), "pageId:", pageId);
-    const customer = participants.find((p) => p.id !== pageId);
+    console.log("[instagram-sync] conv id:", conv.id, "folder:", conv._folder, "participants:", JSON.stringify(participants));
+    const customer = participants.find((p) => p.id !== igUserId);
     console.log("[instagram-sync] customer:", JSON.stringify(customer));
     if (!customer) continue;
 
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
           data: {
             conversationId: newConv.id,
             content: msg.message,
-            sender: msg.from.id === pageId ? "agent" : "customer",
+            sender: msg.from.id === igUserId ? "agent" : "customer",
             status: "delivered",
             read: false,
             platformMsgId: msg.id,
@@ -113,7 +119,7 @@ export async function POST(req: NextRequest) {
           data: {
             conversationId: existing.id,
             content: msg.message,
-            sender: msg.from.id === pageId ? "agent" : "customer",
+            sender: msg.from.id === igUserId ? "agent" : "customer",
             status: "delivered",
             read: false,
             platformMsgId: msg.id,
