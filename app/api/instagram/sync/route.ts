@@ -45,13 +45,13 @@ export async function POST(req: NextRequest) {
   let newCount = 0;
 
   for (const conv of conversations) {
-    const participants: { id: string; name: string }[] = conv.participants?.data ?? [];
+    const participants: { id: string; name?: string; username?: string }[] = conv.participants?.data ?? [];
     console.log("[instagram-sync] conv id:", conv.id, "folder:", conv._folder, "participants:", JSON.stringify(participants));
     const customer = participants.find((p) => p.id !== igUserId);
     console.log("[instagram-sync] customer:", JSON.stringify(customer));
     if (!customer) continue;
 
-    const messages: { id: string; message?: string; from: { id: string; name: string }; created_time: string }[] =
+    const messages: { id: string; message?: string; from?: { id: string; username?: string }; created_time: string }[] =
       conv.messages?.data ?? [];
     console.log("[instagram-sync] messages count:", messages.length, "first:", JSON.stringify(messages[0])?.slice(0, 100));
 
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!existing) {
-      const customerName = customer.name || `Instagram Kullanıcısı`;
+      const customerName = customer.name || customer.username || `Instagram Kullanıcısı`;
       const initials = customerName
         .split(" ")
         .filter(Boolean)
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
           data: {
             conversationId: newConv.id,
             content: msg.message,
-            sender: msg.from.id === igUserId ? "agent" : "customer",
+            sender: msg.from?.id === igUserId ? "agent" : "customer",
             status: "delivered",
             read: false,
             platformMsgId: msg.id,
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
           data: {
             conversationId: existing.id,
             content: msg.message,
-            sender: msg.from.id === igUserId ? "agent" : "customer",
+            sender: msg.from?.id === igUserId ? "agent" : "customer",
             status: "delivered",
             read: false,
             platformMsgId: msg.id,
