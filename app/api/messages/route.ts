@@ -8,8 +8,8 @@ export async function POST(req: NextRequest) {
   const user = await requireAuth(req);
   if (!user) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
 
-  const { conversationId, content } = await req.json();
-  if (!conversationId || !content?.trim()) {
+  const { conversationId, content, attachmentUrl } = await req.json();
+  if (!conversationId || (!content?.trim() && !attachmentUrl)) {
     return NextResponse.json({ error: "Eksik alan" }, { status: 400 });
   }
 
@@ -19,13 +19,20 @@ export async function POST(req: NextRequest) {
   // Gerçek platformlara gönder (token varsa)
   let delivered = false;
   if (conv.platformUserId) {
-    delivered = await sendPlatformMessage(conv.platform, conv.platformUserId, content.trim());
+    delivered = await sendPlatformMessage(
+      conv.platform,
+      conv.platformUserId,
+      content?.trim() ?? "",
+      attachmentUrl
+    );
   }
+
+  const messageContent = content?.trim() || "[Resim]";
 
   const message = await prisma.message.create({
     data: {
       conversationId,
-      content: content.trim(),
+      content: messageContent,
       sender: "agent",
       status: delivered ? "delivered" : "sent",
       read: true,

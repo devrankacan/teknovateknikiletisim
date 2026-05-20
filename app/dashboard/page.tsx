@@ -41,6 +41,26 @@ type Stats = {
   avgResponseTime: string;
 };
 
+// ===== EMOJI DATA =====
+const EMOJI_CATEGORIES = [
+  {
+    label: "😀 Yüzler",
+    emojis: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥸","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡"],
+  },
+  {
+    label: "👍 Jestler",
+    emojis: ["👋","🤚","🖐","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🫀","🫁","🧠","🦷","🦴","👀","👁","👅"],
+  },
+  {
+    label: "❤️ Semboller",
+    emojis: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❤️‍🔥","❤️‍🩹","💕","💞","💓","💗","💖","💘","💝","💟","☮️","✝️","☯️","✡️","🔯","🕎","☦️","🛐","⛎","♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓","🆔","⚛️","🉑","☢️","☣️","📴","📳","🈶","🈚","🈸"],
+  },
+  {
+    label: "🎉 Objeler",
+    emojis: ["🎉","🎊","🎈","🎁","🎀","🎗","🎟","🎫","🎖","🏆","🥇","🥈","🥉","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🏓","🏸","🏒","🥍","🏑","🏏","⛳","🏹","🎣","🤿","🥊","🥋","🎽","⛸","🛷","🎿","⛷","🏂","🪂","🏋","🤼","🤸","⛹","🤺","🏇","🧘","🧗"],
+  },
+];
+
 const STATUS_FILTERS = [
   { label: "Tümü", value: "all" },
   { label: "Aktif", value: "active" },
@@ -141,6 +161,13 @@ export default function DashboardPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sseRef = useRef<EventSource | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  const [selectedFile, setSelectedFile] = useState<{ url: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState(0);
 
   useEffect(() => {
     const u = sessionStorage.getItem("current_user");
@@ -204,6 +231,17 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    function handleOutside(e: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [showEmojiPicker]);
+
   async function selectConversation(conv: DBConversation) {
     setSelectedConv(conv);
     setShowMobileChat(true);
@@ -214,15 +252,19 @@ export default function DashboardPage() {
   }
 
   async function sendMessage() {
-    if (!messageInput.trim() || !selectedConv || sending) return;
+    if ((!messageInput.trim() && !selectedFile) || !selectedConv || sending) return;
     setSending(true);
     const content = messageInput.trim();
+    const fileToSend = selectedFile;
     setMessageInput("");
+    setSelectedFile(null);
     if (textareaRef.current) textareaRef.current.style.height = "44px";
+    const body: Record<string, string> = { conversationId: selectedConv.id, content };
+    if (fileToSend) body.attachmentUrl = fileToSend.url;
     const res = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId: selectedConv.id, content }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       const msg: DBMessage = await res.json();
@@ -234,8 +276,43 @@ export default function DashboardPage() {
     setSending(false);
   }
 
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    if (res.ok) {
+      const { url } = await res.json();
+      setSelectedFile({ url, name: file.name });
+    }
+    setUploading(false);
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  }
+
+  function insertEmoji(emoji: string) {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setMessageInput((prev) => prev + emoji);
+      return;
+    }
+    const start = ta.selectionStart ?? messageInput.length;
+    const end = ta.selectionEnd ?? messageInput.length;
+    const newValue = messageInput.slice(0, start) + emoji + messageInput.slice(end);
+    setMessageInput(newValue);
+    // Restore cursor after emoji
+    requestAnimationFrame(() => {
+      ta.selectionStart = start + emoji.length;
+      ta.selectionEnd = start + emoji.length;
+      ta.focus();
+    });
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === "Escape") setShowEmojiPicker(false);
   }
 
   function handleTextareaChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -623,33 +700,100 @@ export default function DashboardPage() {
 
             {/* Input */}
             <div className="px-4 py-4 flex-shrink-0" style={{ background: "var(--surface)", borderTop: "1px solid var(--border-subtle)" }}>
-              {(
+              {/* File preview */}
+              {selectedFile && (
+                <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl"
+                  style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
+                  <img src={selectedFile.url} alt={selectedFile.name}
+                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                    style={{ border: "1px solid var(--border)" }} />
+                  <span className="flex-1 text-xs truncate" style={{ color: "var(--text-secondary)" }}>
+                    {selectedFile.name}
+                  </span>
+                  <button onClick={() => setSelectedFile(null)}
+                    className="flex-shrink-0 p-1 rounded-full"
+                    style={{ color: "var(--text-muted)", background: "var(--surface)" }}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Emoji picker popup */}
+              <div className="relative">
+                {showEmojiPicker && (
+                  <div ref={emojiPickerRef}
+                    className="absolute bottom-full mb-2 left-0 rounded-2xl shadow-xl z-50 overflow-hidden"
+                    style={{
+                      width: 320,
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+                    }}>
+                    {/* Category tabs */}
+                    <div className="flex border-b" style={{ borderColor: "var(--border-subtle)" }}>
+                      {EMOJI_CATEGORIES.map((cat, i) => (
+                        <button key={i} onClick={() => setEmojiCategory(i)}
+                          className="flex-1 py-2 text-xs font-medium transition-colors"
+                          style={{
+                            background: emojiCategory === i ? "var(--accent-light)" : "transparent",
+                            color: emojiCategory === i ? "var(--accent)" : "var(--text-muted)",
+                            borderBottom: emojiCategory === i ? "2px solid var(--accent)" : "2px solid transparent",
+                          }}>
+                          {cat.label.split(" ")[0]}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Emoji grid */}
+                    <div className="p-2 grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
+                      {EMOJI_CATEGORIES[emojiCategory].emojis.map((emoji, i) => (
+                        <button key={i} onClick={() => insertEmoji(emoji)}
+                          className="w-9 h-9 flex items-center justify-center rounded-lg text-lg transition-colors hover:bg-[var(--surface-raised)]"
+                          title={emoji}>
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-end gap-2 rounded-2xl px-4 py-3"
                   style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
-                  <button className="mb-0.5 hidden sm:block" style={{ color: "var(--text-muted)" }}>
-                    <Paperclip className="w-4 h-4" />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="mb-0.5 hidden sm:block transition-colors"
+                    style={{ color: uploading ? "var(--accent)" : "var(--text-muted)" }}
+                    title="Resim ekle">
+                    {uploading
+                      ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      : <Paperclip className="w-4 h-4" />}
                   </button>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
                   <textarea ref={textareaRef} value={messageInput}
                     onChange={handleTextareaChange} onKeyDown={handleKeyDown}
                     placeholder={`${selectedConv.customerName}'e mesaj yaz...`}
                     rows={1} className="flex-1 resize-none text-sm bg-transparent"
                     style={{ color: "var(--text-primary)", height: 44, maxHeight: 120, lineHeight: "1.5", paddingTop: 10 }} />
-                  <button className="mb-0.5 hidden sm:block" style={{ color: "var(--text-muted)" }}>
+                  <button
+                    onClick={() => setShowEmojiPicker((v) => !v)}
+                    className="mb-0.5 hidden sm:block transition-colors"
+                    style={{ color: showEmojiPicker ? "var(--accent)" : "var(--text-muted)" }}
+                    title="Emoji ekle">
                     <Smile className="w-4 h-4" />
                   </button>
-                  <button onClick={sendMessage} disabled={!messageInput.trim() || sending}
+                  <button onClick={sendMessage} disabled={(!messageInput.trim() && !selectedFile) || sending}
                     className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
                     style={{
-                      background: messageInput.trim() && !sending ? "linear-gradient(135deg, var(--accent), #1D4ED8)" : "var(--surface-raised)",
-                      color: messageInput.trim() && !sending ? "white" : "var(--text-muted)",
-                      boxShadow: messageInput.trim() ? "0 2px 12px rgba(37,99,235,0.35)" : "none",
+                      background: (messageInput.trim() || selectedFile) && !sending ? "linear-gradient(135deg, var(--accent), #1D4ED8)" : "var(--surface-raised)",
+                      color: (messageInput.trim() || selectedFile) && !sending ? "white" : "var(--text-muted)",
+                      boxShadow: (messageInput.trim() || selectedFile) ? "0 2px 12px rgba(37,99,235,0.35)" : "none",
                     }}>
                     {sending
                       ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                       : <Send className="w-4 h-4" />}
                   </button>
                 </div>
-              )}
+              </div>
               <div className="text-[10px] mt-2 text-center hidden sm:block" style={{ color: "var(--text-muted)" }}>
                 Enter ile gönder · Shift+Enter yeni satır
               </div>
