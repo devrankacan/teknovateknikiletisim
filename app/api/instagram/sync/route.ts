@@ -40,15 +40,18 @@ export async function POST(req: NextRequest) {
 
   for (const conv of conversations) {
     const participants: { id: string; name: string }[] = conv.participants?.data ?? [];
+    console.log("[instagram-sync] conv id:", conv.id, "folder:", conv._folder, "participants:", JSON.stringify(participants), "pageId:", pageId);
     const customer = participants.find((p) => p.id !== pageId);
+    console.log("[instagram-sync] customer:", JSON.stringify(customer));
     if (!customer) continue;
 
     const messages: { id: string; message?: string; from: { id: string; name: string }; created_time: string }[] =
       conv.messages?.data ?? [];
+    console.log("[instagram-sync] messages count:", messages.length, "first:", JSON.stringify(messages[0])?.slice(0, 100));
 
     // En eski mesajı bul (reverse chronological gelir)
     const firstMsg = messages[messages.length - 1];
-    if (!firstMsg?.message) continue;
+    if (!firstMsg?.message) { console.log("[instagram-sync] firstMsg yok, atlanıyor"); continue; }
 
     // Zaten var mı?
     const existing = await prisma.conversation.findFirst({
