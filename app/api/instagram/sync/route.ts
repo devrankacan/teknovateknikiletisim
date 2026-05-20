@@ -32,8 +32,13 @@ export async function POST(req: NextRequest) {
 
   console.log("[instagram-sync] inbox status:", inboxRes.status, "pending status:", pendingRes.status);
 
-  const inboxData = inboxRes.ok ? await inboxRes.json() : { data: [] };
-  const pendingData = pendingRes.ok ? await pendingRes.json() : { data: [] };
+  const inboxRaw = await inboxRes.text();
+  const pendingRaw = await pendingRes.text();
+  if (!inboxRes.ok) console.log("[instagram-sync] inbox error:", inboxRaw.slice(0, 500));
+  if (!pendingRes.ok) console.log("[instagram-sync] pending error:", pendingRaw.slice(0, 500));
+
+  const inboxData = inboxRes.ok ? JSON.parse(inboxRaw) : { data: [] };
+  const pendingData = pendingRes.ok ? JSON.parse(pendingRaw) : { data: [] };
 
   console.log("[instagram-sync] inbox count:", inboxData.data?.length ?? 0, "pending count:", pendingData.data?.length ?? 0);
 
