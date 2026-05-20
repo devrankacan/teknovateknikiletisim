@@ -9,12 +9,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const platform = searchParams.get("platform");
   const status = searchParams.get("status");
+  const excludeStatus = searchParams.get("excludeStatus");
   const search = searchParams.get("search");
 
   const conversations = await prisma.conversation.findMany({
     where: {
       ...(platform && platform !== "all" ? { platform } : {}),
       ...(status && status !== "all" ? { status } : {}),
+      ...(excludeStatus ? { NOT: { status: excludeStatus } } : {}),
       ...(search
         ? {
             OR: [

@@ -7,7 +7,7 @@ import { formatTime, formatFullTime } from "@/lib/auth";
 import PlatformIcon from "@/components/PlatformIcon";
 import {
   Search, Send, LogOut, BarChart2, MessageSquare, CheckCheck,
-  Clock, MoreVertical, Bell, Users, X, Check, Paperclip, Smile, Camera, ArrowLeft,
+  Clock, MoreVertical, Bell, Users, X, Check, Paperclip, Smile, Camera, ArrowLeft, Archive, ArchiveRestore,
 } from "lucide-react";
 
 type DBMessage = {
@@ -132,6 +132,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showArchive, setShowArchive] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [sending, setSending] = useState(false);
@@ -150,14 +151,19 @@ export default function DashboardPage() {
   const fetchConversations = useCallback(async () => {
     const params = new URLSearchParams();
     if (platformFilter !== "all") params.set("platform", platformFilter);
-    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (showArchive) {
+      params.set("status", "archived");
+    } else {
+      params.set("excludeStatus", "archived");
+      if (statusFilter !== "all") params.set("status", statusFilter);
+    }
     if (search) params.set("search", search);
     const res = await fetch(`/api/conversations?${params}`);
     if (res.status === 401) { router.push("/"); return; }
     const data: DBConversation[] = await res.json();
     setConversations(data);
     setLoadingConvs(false);
-  }, [platformFilter, statusFilter, search, router]);
+  }, [platformFilter, statusFilter, showArchive, search, router]);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
@@ -238,14 +244,24 @@ export default function DashboardPage() {
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
   }
 
-  async function resolveConversation(id: string) {
+  async function archiveConversation(id: string) {
     await fetch(`/api/conversations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "resolved" }),
+      body: JSON.stringify({ status: "archived" }),
     });
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, status: "resolved" } : c)));
-    if (selectedConv?.id === id) setSelectedConv((p) => p ? { ...p, status: "resolved" } : p);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (selectedConv?.id === id) { setSelectedConv(null); setShowMobileChat(false); }
+  }
+
+  async function unarchiveConversation(id: string) {
+    await fetch(`/api/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    });
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (selectedConv?.id === id) { setSelectedConv(null); setShowMobileChat(false); }
   }
 
   async function logout() {
@@ -471,6 +487,20 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Archive toggle */}
+        <button
+          onClick={() => { setShowArchive(!showArchive); setSelectedConv(null); setShowMobileChat(false); }}
+          className="flex items-center gap-2.5 px-4 py-3 w-full transition-colors"
+          style={{
+            borderTop: "1px solid var(--border-subtle)",
+            background: showArchive ? "var(--accent-light)" : "transparent",
+            color: showArchive ? "var(--accent)" : "var(--text-muted)",
+          }}
+        >
+          <Archive style={{ width: 16, height: 16, flexShrink: 0 }} />
+          <span className="text-xs font-medium">Arşiv</span>
+        </button>
+
         {/* User footer */}
         <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
@@ -531,6 +561,21 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {selectedConv.status === "archived" ? (
+                  <button onClick={() => unarchiveConversation(selectedConv.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.2)", color: "var(--accent)" }}>
+                    <ArchiveRestore className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Geri Al</span>
+                  </button>
+                ) : (
+                  <button onClick={() => archiveConversation(selectedConv.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", color: "#f59e0b" }}>
+                    <Archive className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Arşivle</span>
+                  </button>
+                )}
                 <button className="p-2 rounded-lg" style={{ color: "var(--text-muted)" }}>
                   <MoreVertical className="w-4 h-4" />
                 </button>
