@@ -684,14 +684,19 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div className={`max-w-xs sm:max-w-md flex flex-col ${msg.sender === "agent" ? "items-end" : "items-start"}`}>
-                    <div className={msg.content.startsWith("/uploads/") ? "rounded-2xl overflow-hidden" : "px-4 py-2.5 rounded-2xl text-sm leading-relaxed"}
-                      style={msg.sender === "agent"
-                        ? { background: msg.content.startsWith("/uploads/") ? "transparent" : "linear-gradient(135deg, var(--accent), #1D4ED8)", color: "white", borderBottomRightRadius: 6, boxShadow: msg.content.startsWith("/uploads/") ? "none" : "0 2px 8px rgba(37,99,235,0.25)" }
-                        : { background: msg.content.startsWith("/uploads/") ? "transparent" : "var(--surface-raised)", color: "var(--text-primary)", border: msg.content.startsWith("/uploads/") ? "none" : "1px solid var(--border)", borderBottomLeftRadius: 6 }}>
-                      {msg.content.startsWith("/uploads/") ? (
-                        <img src={msg.content} alt="Resim" style={{ maxWidth: 240, maxHeight: 240, borderRadius: 12, display: "block" }} />
-                      ) : msg.content}
-                    </div>
+                    {(() => {
+                      const isImg = msg.content.startsWith("/api/uploads/") || msg.content.startsWith("/uploads/");
+                      return (
+                        <div className={isImg ? "rounded-2xl overflow-hidden" : "px-4 py-2.5 rounded-2xl text-sm leading-relaxed"}
+                          style={msg.sender === "agent"
+                            ? { background: isImg ? "transparent" : "linear-gradient(135deg, var(--accent), #1D4ED8)", color: "white", borderBottomRightRadius: 6, boxShadow: isImg ? "none" : "0 2px 8px rgba(37,99,235,0.25)" }
+                            : { background: isImg ? "transparent" : "var(--surface-raised)", color: "var(--text-primary)", border: isImg ? "none" : "1px solid var(--border)", borderBottomLeftRadius: 6 }}>
+                          {isImg ? (
+                            <img src={msg.content} alt="" style={{ maxWidth: 240, maxHeight: 240, borderRadius: 12, display: "block" }} />
+                          ) : msg.content}
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center gap-1 mt-1 px-1">
                       <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
                         {formatFullTime(new Date(msg.createdAt))}

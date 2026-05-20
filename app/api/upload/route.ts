@@ -18,15 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sadece resim dosyaları kabul edilir" }, { status: 400 });
   }
 
-  const uploadsDir = path.resolve(process.cwd(), "public", "uploads");
+  const uploadsDir = path.resolve(process.cwd(), "storage", "uploads");
   await mkdir(uploadsDir, { recursive: true });
 
-  const ext = file.name.split(".").pop() ?? "jpg";
   const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const filepath = path.join(uploadsDir, filename);
 
   const arrayBuffer = await file.arrayBuffer();
   await writeFile(filepath, Buffer.from(arrayBuffer));
 
-  return NextResponse.json({ url: `/uploads/${filename}` });
+  return NextResponse.json({ url: `/api/uploads/${filename}` });
 }
