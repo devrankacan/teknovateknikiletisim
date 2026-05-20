@@ -124,7 +124,7 @@ async function handleMetaMessage(params: {
     where: { platform, platformUserId: senderId },
   });
 
-  const initials = senderName
+  const initials = (senderName || "?")
     .split(" ")
     .filter(Boolean)
     .map((w) => w[0])
