@@ -15,15 +15,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Instagram token ayarlı değil" }, { status: 500 });
   }
 
-  const url = `${GRAPH}/${pageId}/conversations?platform=instagram&fields=participants,messages{message,from,created_time,id}&access_token=${token}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const err = await res.text();
-    return NextResponse.json({ error: "Instagram API hatası", detail: err }, { status: 500 });
-  }
+  const fields = "participants,messages{message,from,created_time,id}";
+  const baseUrl = `${GRAPH}/${pageId}/conversations?platform=instagram&fields=${fields}&access_token=${token}`;
 
-  const data = await res.json();
-  const conversations = data.data ?? [];
+  // Hem normal gelen kutusu hem de bekleyen mesaj isteklerini çek
+  const [inboxRes, pendingRes] = await Promise.all([
+    fetch(baseUrl),
+    fetch(`${baseUrl}&folder=pending`),
+  ]);
+
+  console.log("[instagram-sync] inbox status:", inboxRes.status, "pending status:", pendingRes.status);
+
+  const inboxData = inboxRes.ok ? await inboxRes.json() : { data: [] };
+  const pendingData = pendingRes.ok ? await pendingRes.json() : { data: [] };
+
+  console.log("[instagram-sync] inbox count:", inboxData.data?.length ?? 0, "pending count:", pendingData.data?.length ?? 0);
+
+  // pending'dekiler "request" statüsüyle işaretlenir
+  const conversations = [
+    ...(inboxData.data ?? []).map((c: Record<string, unknown>) => ({ ...c, _folder: "inbox" })),
+    ...(pendingData.data ?? []).map((c: Record<string, unknown>) => ({ ...c, _folder: "pending" })),
+  ];
   let newCount = 0;
 
   for (const conv of conversations) {
@@ -59,7 +71,7 @@ export async function POST(req: NextRequest) {
           customerHandle: customer.id,
           customerAvatar: initials,
           platformUserId: customer.id,
-          status: "request",
+          status: conv._folder === "pending" ? "request" : "active",
           unreadCount: messages.length,
           tags: JSON.stringify([]),
         },
