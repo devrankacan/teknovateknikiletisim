@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           customerHandle: customer.id,
           customerAvatar: initials,
           platformUserId: customer.id,
-          status: "active",
+          status: "request",
           unreadCount: messages.length,
           tags: JSON.stringify([]),
         },

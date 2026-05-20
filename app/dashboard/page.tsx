@@ -154,6 +154,8 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showArchive, setShowArchive] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [messageRequests, setMessageRequests] = useState<DBConversation[]>([]);
+  const [showRequests, setShowRequests] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [sending, setSending] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -181,7 +183,8 @@ export default function DashboardPage() {
     if (showArchive) {
       params.set("status", "archived");
     } else {
-      params.set("excludeStatus", "archived");
+      params.append("excludeStatuses", "archived");
+      params.append("excludeStatuses", "request");
       if (statusFilter !== "all") params.set("status", statusFilter);
     }
     if (search) params.set("search", search);
@@ -194,13 +197,24 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
+  const fetchRequests = useCallback(async () => {
+    const res = await fetch("/api/conversations?status=request");
+    if (res.ok) {
+      const data: DBConversation[] = await res.json();
+      setMessageRequests(data);
+    }
+  }, []);
+
   // Instagram mesaj isteklerini otomatik çek (30s)
   useEffect(() => {
-    const poll = () => fetch("/api/instagram/sync", { method: "POST" }).catch(() => {});
+    const poll = async () => {
+      await fetch("/api/instagram/sync", { method: "POST" }).catch(() => {});
+      fetchRequests();
+    };
     poll();
     const id = setInterval(poll, 30000);
     return () => clearInterval(id);
-  }, []);
+  }, [fetchRequests]);
 
   useEffect(() => {
     if (!showStats) return;
@@ -503,84 +517,116 @@ export default function DashboardPage() {
 
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto">
-          {loadingConvs ? (
-            <div className="flex items-center justify-center h-24">
-              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--text-muted)" }}>
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-          ) : conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-xs" style={{ color: "var(--text-muted)" }}>
-              <MessageSquare className="w-8 h-8 mb-2 opacity-30" />
-              Konuşma bulunamadı
-            </div>
-          ) : (
-            conversations.map((conv) => (
-              <button key={conv.id} onClick={() => selectConversation(conv)}
-                className="w-full text-left px-5 py-4 transition-all relative"
-                style={{
-                  background: selectedConv?.id === conv.id ? "var(--accent-light)" : "transparent",
-                  borderLeft: selectedConv?.id === conv.id ? "2px solid var(--accent)" : "2px solid transparent",
-                }}>
-                <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{
-                        background: `${platformColor[conv.platform]}20`,
-                        color: platformColor[conv.platform],
-                        border: `1.5px solid ${platformColor[conv.platform]}30`,
-                      }}>
-                      {conv.customerAvatar}
-                    </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full"
-                      style={{ background: platformColor[conv.platform], border: "2px solid var(--surface)" }}>
-                      {conv.platform === "whatsapp" && <span className="flex items-center justify-center w-full h-full">{WA_SVG(8)}</span>}
-                      {conv.platform === "instagram" && <span className="flex items-center justify-center w-full h-full">{IG_SVG(8)}</span>}
-                      {conv.platform === "messenger" && <span className="flex items-center justify-center w-full h-full">{MSG_SVG(8)}</span>}
-                    </div>
+          {(() => {
+            const list = showRequests ? messageRequests : conversations;
+            if (!showRequests && loadingConvs) return (
+              <div className="flex items-center justify-center h-24">
+                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--text-muted)" }}>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            );
+            if (list.length === 0) return (
+              <div className="flex flex-col items-center justify-center h-32 text-xs" style={{ color: "var(--text-muted)" }}>
+                <MessageSquare className="w-8 h-8 mb-2 opacity-30" />
+                {showRequests ? "Mesaj isteği yok" : "Konuşma bulunamadı"}
+              </div>
+            );
+            return (
+              <>
+                {showRequests && (
+                  <div className="px-4 py-2 text-xs font-semibold" style={{ color: "#a855f7" }}>
+                    Instagram Mesaj İstekleri ({list.length})
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
-                        {conv.customerName}
-                      </span>
-                      <span className="text-[10px] flex-shrink-0 ml-2" style={{ color: "var(--text-muted)" }}>
-                        {formatTime(new Date(conv.updatedAt))}
-                      </span>
+                )}
+                {list.map((conv) => (
+                  <button key={conv.id} onClick={() => selectConversation(conv)}
+                    className="w-full text-left px-5 py-4 transition-all relative"
+                    style={{
+                      background: selectedConv?.id === conv.id ? "var(--accent-light)" : "transparent",
+                      borderLeft: selectedConv?.id === conv.id ? "2px solid var(--accent)" : "2px solid transparent",
+                    }}>
+                    <div className="flex items-start gap-3">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{
+                            background: `${platformColor[conv.platform]}20`,
+                            color: platformColor[conv.platform],
+                            border: `1.5px solid ${platformColor[conv.platform]}30`,
+                          }}>
+                          {conv.customerAvatar}
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full"
+                          style={{ background: platformColor[conv.platform], border: "2px solid var(--surface)" }}>
+                          {conv.platform === "whatsapp" && <span className="flex items-center justify-center w-full h-full">{WA_SVG(8)}</span>}
+                          {conv.platform === "instagram" && <span className="flex items-center justify-center w-full h-full">{IG_SVG(8)}</span>}
+                          {conv.platform === "messenger" && <span className="flex items-center justify-center w-full h-full">{MSG_SVG(8)}</span>}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                            {conv.customerName}
+                          </span>
+                          <span className="text-[10px] flex-shrink-0 ml-2" style={{ color: "var(--text-muted)" }}>
+                            {formatTime(new Date(conv.updatedAt))}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs truncate pr-2" style={{ color: "var(--text-secondary)" }}>
+                            {conv.messages?.[0]?.content?.startsWith("/api/uploads/") ? "📎 Resim" : conv.messages?.[0]?.content ?? "—"}
+                          </span>
+                          {conv.unreadCount > 0 && (
+                            <span className="flex-shrink-0 min-w-5 h-5 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
+                              style={{ background: showRequests ? "#a855f7" : "var(--accent)", padding: "0 5px" }}>
+                              {conv.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                        {showRequests && (
+                          <div className="mt-1">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                              style={{ background: "rgba(168,85,247,0.1)", color: "#a855f7" }}>
+                              İstek
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs truncate pr-2" style={{ color: "var(--text-secondary)" }}>
-                        {conv.messages?.[0]?.content ?? "—"}
-                      </span>
-                      {conv.unreadCount > 0 ? (
-                        <span className="flex-shrink-0 min-w-5 h-5 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
-                          style={{ background: "var(--accent)", padding: "0 5px" }}>
-                          {conv.unreadCount}
-                        </span>
-                      ) : conv.status === "resolved" ? (
-                        <CheckCheck className="flex-shrink-0 w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
-                      ) : null}
-                    </div>
-                    <div className="mt-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                        style={{
-                          background: conv.status === "active" ? "rgba(34,197,94,0.1)" : conv.status === "pending" ? "rgba(245,158,11,0.1)" : "rgba(61,82,120,0.15)",
-                          color: conv.status === "active" ? "#22c55e" : conv.status === "pending" ? "#f59e0b" : "var(--text-muted)",
-                        }}>
-                        {conv.status === "active" ? "Aktif" : conv.status === "pending" ? "Bekliyor" : "Çözüldü"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))
-          )}
+                  </button>
+                ))}
+              </>
+            );
+          })()}
         </div>
+
+        {/* Message requests toggle */}
+        <button
+          onClick={() => { setShowRequests(!showRequests); setShowArchive(false); setSelectedConv(null); setShowMobileChat(false); }}
+          className="flex items-center gap-2.5 px-4 py-3 w-full transition-colors"
+          style={{
+            borderTop: "1px solid var(--border-subtle)",
+            background: showRequests ? "rgba(168,85,247,0.1)" : "transparent",
+            color: showRequests ? "#a855f7" : "var(--text-muted)",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span className="text-xs font-medium">Mesaj İstekleri</span>
+          {messageRequests.length > 0 && (
+            <span className="ml-auto text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center"
+              style={{ background: "#a855f7", color: "white" }}>
+              {messageRequests.length}
+            </span>
+          )}
+        </button>
 
         {/* Archive toggle */}
         <button
-          onClick={() => { setShowArchive(!showArchive); setSelectedConv(null); setShowMobileChat(false); }}
+          onClick={() => { setShowArchive(!showArchive); setShowRequests(false); setSelectedConv(null); setShowMobileChat(false); }}
           className="flex items-center gap-2.5 px-4 py-3 w-full transition-colors"
           style={{
             borderTop: "1px solid var(--border-subtle)",

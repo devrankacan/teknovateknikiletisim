@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.conversation.update({
     where: { id: conversationId },
-    data: { updatedAt: new Date(), status: "active" },
+    data: { updatedAt: new Date(), status: "active", unreadCount: 0 },
   });
 
   // SSE ile tüm bağlı clientlara bildir

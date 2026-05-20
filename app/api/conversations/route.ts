@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const platform = searchParams.get("platform");
   const status = searchParams.get("status");
   const excludeStatus = searchParams.get("excludeStatus");
+  const excludeStatuses = searchParams.getAll("excludeStatuses");
   const search = searchParams.get("search");
 
   const conversations = await prisma.conversation.findMany({
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
       ...(platform && platform !== "all" ? { platform } : {}),
       ...(status && status !== "all" ? { status } : {}),
       ...(excludeStatus ? { NOT: { status: excludeStatus } } : {}),
+      ...(excludeStatuses.length > 0 ? { NOT: { status: { in: excludeStatuses } } } : {}),
       ...(search
         ? {
             OR: [
