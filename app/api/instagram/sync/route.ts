@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
     });
 
     if (!existing) {
-      const initials = customer.name
+      const customerName = customer.name || `Instagram Kullanıcısı`;
+      const initials = customerName
         .split(" ")
         .filter(Boolean)
         .map((w: string) => w[0])
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       const newConv = await prisma.conversation.create({
         data: {
           platform: "instagram",
-          customerName: customer.name,
+          customerName: customerName,
           customerHandle: customer.id,
           customerAvatar: initials,
           platformUserId: customer.id,
