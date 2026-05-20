@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const messageContent = content?.trim() || "[Resim]";
+  const messageContent = content?.trim() || attachmentUrl || "[Resim]";
 
   const message = await prisma.message.create({
     data: {

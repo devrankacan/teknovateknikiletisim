@@ -164,7 +164,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
-  const [selectedFile, setSelectedFile] = useState<{ url: string; name: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ previewUrl: string; url: string; name: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiCategory, setEmojiCategory] = useState(0);
@@ -252,7 +252,8 @@ export default function DashboardPage() {
   }
 
   async function sendMessage() {
-    if ((!messageInput.trim() && !selectedFile) || !selectedConv || sending) return;
+    if ((!messageInput.trim() && !selectedFile) || !selectedConv || sending || uploading) return;
+    if (selectedFile && !selectedFile.url) return; // upload still in progress
     setSending(true);
     const content = messageInput.trim();
     const fileToSend = selectedFile;
@@ -279,16 +280,21 @@ export default function DashboardPage() {
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Immediate local preview via blob URL
+    const previewUrl = URL.createObjectURL(file);
+    setSelectedFile({ previewUrl, url: "", name: file.name });
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     if (res.ok) {
       const { url } = await res.json();
-      setSelectedFile({ url, name: file.name });
+      setSelectedFile((prev) => prev ? { ...prev, url } : null);
+    } else {
+      setSelectedFile(null);
+      URL.revokeObjectURL(previewUrl);
     }
     setUploading(false);
-    // Reset input so same file can be selected again
     e.target.value = "";
   }
 
@@ -678,11 +684,13 @@ export default function DashboardPage() {
                     </div>
                   )}
                   <div className={`max-w-xs sm:max-w-md flex flex-col ${msg.sender === "agent" ? "items-end" : "items-start"}`}>
-                    <div className="px-4 py-2.5 rounded-2xl text-sm leading-relaxed"
+                    <div className={msg.content.startsWith("/uploads/") ? "rounded-2xl overflow-hidden" : "px-4 py-2.5 rounded-2xl text-sm leading-relaxed"}
                       style={msg.sender === "agent"
-                        ? { background: "linear-gradient(135deg, var(--accent), #1D4ED8)", color: "white", borderBottomRightRadius: 6, boxShadow: "0 2px 8px rgba(37,99,235,0.25)" }
-                        : { background: "var(--surface-raised)", color: "var(--text-primary)", border: "1px solid var(--border)", borderBottomLeftRadius: 6 }}>
-                      {msg.content}
+                        ? { background: msg.content.startsWith("/uploads/") ? "transparent" : "linear-gradient(135deg, var(--accent), #1D4ED8)", color: "white", borderBottomRightRadius: 6, boxShadow: msg.content.startsWith("/uploads/") ? "none" : "0 2px 8px rgba(37,99,235,0.25)" }
+                        : { background: msg.content.startsWith("/uploads/") ? "transparent" : "var(--surface-raised)", color: "var(--text-primary)", border: msg.content.startsWith("/uploads/") ? "none" : "1px solid var(--border)", borderBottomLeftRadius: 6 }}>
+                      {msg.content.startsWith("/uploads/") ? (
+                        <img src={msg.content} alt="Resim" style={{ maxWidth: 240, maxHeight: 240, borderRadius: 12, display: "block" }} />
+                      ) : msg.content}
                     </div>
                     <div className="flex items-center gap-1 mt-1 px-1">
                       <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
@@ -704,7 +712,7 @@ export default function DashboardPage() {
               {selectedFile && (
                 <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl"
                   style={{ background: "var(--surface-raised)", border: "1px solid var(--border)" }}>
-                  <img src={selectedFile.url} alt={selectedFile.name}
+                  <img src={selectedFile.previewUrl} alt={selectedFile.name}
                     className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                     style={{ border: "1px solid var(--border)" }} />
                   <span className="flex-1 text-xs truncate" style={{ color: "var(--text-secondary)" }}>
@@ -781,12 +789,12 @@ export default function DashboardPage() {
                     title="Emoji ekle">
                     <Smile className="w-4 h-4" />
                   </button>
-                  <button onClick={sendMessage} disabled={(!messageInput.trim() && !selectedFile) || sending}
+                  <button onClick={sendMessage} disabled={(!messageInput.trim() && !selectedFile) || sending || uploading || (!!selectedFile && !selectedFile.url)}
                     className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
                     style={{
-                      background: (messageInput.trim() || selectedFile) && !sending ? "linear-gradient(135deg, var(--accent), #1D4ED8)" : "var(--surface-raised)",
-                      color: (messageInput.trim() || selectedFile) && !sending ? "white" : "var(--text-muted)",
-                      boxShadow: (messageInput.trim() || selectedFile) ? "0 2px 12px rgba(37,99,235,0.35)" : "none",
+                      background: (messageInput.trim() || selectedFile?.url) && !sending && !uploading ? "linear-gradient(135deg, var(--accent), #1D4ED8)" : "var(--surface-raised)",
+                      color: (messageInput.trim() || selectedFile?.url) && !sending && !uploading ? "white" : "var(--text-muted)",
+                      boxShadow: (messageInput.trim() || selectedFile?.url) && !uploading ? "0 2px 12px rgba(37,99,235,0.35)" : "none",
                     }}>
                     {sending
                       ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
