@@ -38,9 +38,10 @@ export async function POST(req: NextRequest) {
   console.log("[instagram-sync] inbox count:", inboxData.data?.length ?? 0, "pending count:", pendingData.data?.length ?? 0);
 
   // pending'dekiler "request" statüsüyle işaretlenir
+  // pending önce gelsin — aynı konuşma her ikisinde varsa "request" statüsü korunsun
   const conversations = [
-    ...(inboxData.data ?? []).map((c: Record<string, unknown>) => ({ ...c, _folder: "inbox" })),
     ...(pendingData.data ?? []).map((c: Record<string, unknown>) => ({ ...c, _folder: "pending" })),
+    ...(inboxData.data ?? []).map((c: Record<string, unknown>) => ({ ...c, _folder: "inbox" })),
   ];
   let newCount = 0;
 

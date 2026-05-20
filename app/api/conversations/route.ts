@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       ...(platform && platform !== "all" ? { platform } : {}),
       ...(status && status !== "all" ? { status } : {}),
       ...(excludeStatus ? { NOT: { status: excludeStatus } } : {}),
-      ...(excludeStatuses.length > 0 ? { NOT: { status: { in: excludeStatuses } } } : {}),
+      ...(excludeStatuses.length > 0 ? { status: { notIn: excludeStatuses } } : {}),
       ...(search
         ? {
             OR: [
