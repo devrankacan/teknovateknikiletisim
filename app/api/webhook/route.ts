@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  console.log("[webhook] POST alındı:", JSON.stringify(body).slice(0, 300));
+  console.log("[webhook] POST alındı:", JSON.stringify(body).slice(0, 500));
 
   try {
     for (const entry of body.entry ?? []) {
@@ -30,9 +30,10 @@ export async function POST(req: NextRequest) {
 
       // Instagram / Messenger
       for (const messaging of entry.messaging ?? []) {
+        console.log("[webhook] messaging event:", JSON.stringify(messaging).slice(0, 300));
         // Echo, delivery, read event'lerini atla
-        if (messaging.message?.is_echo) continue;
-        if (messaging.delivery || messaging.read) continue;
+        if (messaging.message?.is_echo) { console.log("[webhook] echo atlandı"); continue; }
+        if (messaging.delivery || messaging.read) { console.log("[webhook] delivery/read atlandı"); continue; }
         if (messaging.message?.text) {
           const platform = body.object === "instagram" ? "instagram" : "messenger";
           console.log(`[webhook] ${platform} mesajı işleniyor, sender: ${messaging.sender.id}`);
