@@ -30,8 +30,9 @@ export async function POST(req: NextRequest) {
 
       // Instagram / Messenger
       for (const messaging of entry.messaging ?? []) {
-        // Echo mesajlarını (sayfanın kendi gönderdiği) atla
+        // Echo, delivery, read event'lerini atla
         if (messaging.message?.is_echo) continue;
+        if (messaging.delivery || messaging.read) continue;
         if (messaging.message?.text) {
           const platform = body.object === "instagram" ? "instagram" : "messenger";
           console.log(`[webhook] ${platform} mesajı işleniyor, sender: ${messaging.sender.id}`);
@@ -112,6 +113,12 @@ async function handleMetaMessage(params: {
 }) {
   const { platform, senderId, senderName, senderPhoto, text, platformMsgId } = params;
 
+  // Aynı mesaj tekrar gelirse atla
+  if (platformMsgId) {
+    const exists = await prisma.message.findFirst({ where: { platformMsgId } });
+    if (exists) return;
+  }
+
   let conv = await prisma.conversation.findFirst({
     where: { platform, platformUserId: senderId },
   });
@@ -162,7 +169,6 @@ async function handleMetaMessage(params: {
       platformMsgId,
     },
   });
-
   broadcastSSE("new_message", {
     conversationId: conv.id,
     message,
