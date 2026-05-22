@@ -64,9 +64,11 @@ export async function startWhatsApp() {
   });
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    console.log("[wa] messages.upsert type:", type, "count:", messages.length);
     if (type !== "notify") return;
 
     for (const msg of messages) {
+      console.log("[wa] msg fromMe:", msg.key.fromMe, "jid:", msg.key.remoteJid, "text:", msg.message?.conversation?.slice(0, 50));
       if (msg.key.fromMe) continue;
       const text =
         msg.message?.conversation ||
