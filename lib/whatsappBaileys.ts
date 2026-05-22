@@ -71,11 +71,10 @@ export async function startWhatsApp() {
       const jid = msg.key.remoteJid ?? "";
       console.log("[wa] msg fromMe:", msg.key.fromMe, "jid:", jid, "text:", msg.message?.conversation?.slice(0, 50));
 
-      // Skip outgoing, broadcasts, status and internal LID messages
+      // Skip outgoing, broadcasts, status and group messages
       if (msg.key.fromMe) continue;
       if (jid === "status@broadcast" || jid.endsWith("@broadcast")) continue;
-      if (jid.endsWith("@lid")) continue;
-      if (jid.includes("@g.us")) continue; // group messages
+      if (jid.includes("@g.us")) continue;
 
       const text =
         msg.message?.conversation ||
@@ -83,7 +82,11 @@ export async function startWhatsApp() {
         "";
       if (!text) continue;
 
-      const senderId = jid.replace("@s.whatsapp.net", "").replace("@c.us", "");
+      // Support both @s.whatsapp.net and newer @lid format
+      const senderId = jid
+        .replace("@s.whatsapp.net", "")
+        .replace("@c.us", "")
+        .replace("@lid", "");
       if (!senderId) continue;
 
       const platformMsgId = msg.key.id ?? undefined;
