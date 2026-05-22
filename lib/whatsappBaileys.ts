@@ -130,6 +130,7 @@ export async function startWhatsApp() {
 
   // Build LID → phone map from contacts
   sock.ev.on("contacts.upsert", (contacts) => {
+    console.log("[wa] contacts.upsert sample:", JSON.stringify(contacts.slice(0, 2)));
     for (const c of contacts) {
       if (c.lid && c.id) {
         const lid = c.lid.endsWith("@lid") ? c.lid : `${c.lid}@lid`;
@@ -140,6 +141,7 @@ export async function startWhatsApp() {
   });
 
   sock.ev.on("contacts.update", (updates) => {
+    console.log("[wa] contacts.update sample:", JSON.stringify(updates.slice(0, 2)));
     for (const c of updates) {
       if (c.lid && c.id) {
         const lid = c.lid.endsWith("@lid") ? c.lid : `${c.lid}@lid`;
