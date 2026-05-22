@@ -138,10 +138,22 @@ export async function startWhatsApp() {
 }
 
 export async function requestWAPairingCode(phoneNumber: string): Promise<string | null> {
+  const phone = phoneNumber.replace(/\D/g, "");
+
+  // Wait up to 10s for socket to exist
+  let waited = 0;
+  while (!sock && waited < 10000) {
+    await new Promise((r) => setTimeout(r, 300));
+    waited += 300;
+  }
   if (!sock) return null;
+
+  // Give socket a moment to register with WA servers before requesting code
+  await new Promise((r) => setTimeout(r, 1500));
+
   try {
-    const code = await sock.requestPairingCode(phoneNumber.replace(/\D/g, ""));
-    return code;
+    const code = await sock.requestPairingCode(phone);
+    return code ?? null;
   } catch {
     return null;
   }
