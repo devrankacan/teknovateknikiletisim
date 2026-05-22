@@ -3,6 +3,7 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  jidNormalizedUser,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import * as path from "path";
@@ -15,16 +16,29 @@ let sock: ReturnType<typeof makeWASocket> | null = null;
 let qrCode: string | null = null;
 let status: "disconnected" | "connecting" | "connected" = "disconnected";
 
+// LID → phone JID mapping (e.g. "123@lid" → "905321234567@s.whatsapp.net")
+const lidToPhone = new Map<string, string>();
+
 export function getWAStatus() {
   return { status, qrCode };
 }
 
+function resolveJid(jid: string): string {
+  if (jid.endsWith("@lid")) {
+    return lidToPhone.get(jid) ?? jid;
+  }
+  return jid;
+}
+
 function displayId(jid: string) {
-  return jid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace("@lid", "");
+  return jid
+    .replace("@s.whatsapp.net", "")
+    .replace("@c.us", "")
+    .replace("@lid", "");
 }
 
 async function upsertWAMessage(
-  jid: string,
+  rawJid: string,
   text: string,
   platformMsgId: string | undefined,
   pushName: string,
@@ -35,11 +49,18 @@ async function upsertWAMessage(
     if (exists) return;
   }
 
-  const handle = displayId(jid);
-  const initials = pushName.split(" ").filter(Boolean).map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
+  // Resolve LID to phone JID for sending
+  const sendJid = resolveJid(rawJid);
+  const handle = displayId(sendJid);
+  const initials =
+    pushName.split(" ").filter(Boolean).map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
 
+  // Look up existing conversation by resolved JID or raw LID
   let conv = await prisma.conversation.findFirst({
-    where: { platform: "whatsapp", platformUserId: jid },
+    where: {
+      platform: "whatsapp",
+      OR: [{ platformUserId: sendJid }, { platformUserId: rawJid }],
+    },
   });
 
   if (!conv) {
@@ -49,22 +70,21 @@ async function upsertWAMessage(
         customerName: pushName,
         customerHandle: handle,
         customerAvatar: initials,
-        platformUserId: jid,
+        platformUserId: sendJid,
         status: "active",
         unreadCount: sender === "customer" ? 1 : 0,
         tags: JSON.stringify([]),
       },
     });
-  } else if (sender === "customer") {
-    await prisma.conversation.update({
-      where: { id: conv.id },
-      data: { unreadCount: { increment: 1 }, updatedAt: new Date() },
-    });
   } else {
-    await prisma.conversation.update({
-      where: { id: conv.id },
-      data: { updatedAt: new Date() },
-    });
+    // Update platformUserId if we now have the resolved phone JID
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (conv.platformUserId !== sendJid && !sendJid.endsWith("@lid")) {
+      updateData.platformUserId = sendJid;
+      updateData.customerHandle = handle;
+    }
+    if (sender === "customer") updateData.unreadCount = { increment: 1 };
+    await prisma.conversation.update({ where: { id: conv.id }, data: updateData });
   }
 
   const message = await prisma.message.create({
@@ -81,7 +101,10 @@ async function upsertWAMessage(
   broadcastSSE("new_message", {
     conversationId: conv.id,
     message,
-    conversation: { ...conv, unreadCount: sender === "customer" ? conv.unreadCount + 1 : conv.unreadCount },
+    conversation: {
+      ...conv,
+      unreadCount: sender === "customer" ? conv.unreadCount + 1 : conv.unreadCount,
+    },
   });
 }
 
@@ -104,6 +127,27 @@ export async function startWhatsApp() {
   });
 
   sock.ev.on("creds.update", saveCreds);
+
+  // Build LID → phone map from contacts
+  sock.ev.on("contacts.upsert", (contacts) => {
+    for (const c of contacts) {
+      if (c.lid && c.id) {
+        const lid = c.lid.endsWith("@lid") ? c.lid : `${c.lid}@lid`;
+        const phone = c.id.endsWith("@s.whatsapp.net") ? c.id : `${c.id}@s.whatsapp.net`;
+        lidToPhone.set(lid, phone);
+      }
+    }
+  });
+
+  sock.ev.on("contacts.update", (updates) => {
+    for (const c of updates) {
+      if (c.lid && c.id) {
+        const lid = c.lid.endsWith("@lid") ? c.lid : `${c.lid}@lid`;
+        const phone = c.id.endsWith("@s.whatsapp.net") ? c.id : `${c.id}@s.whatsapp.net`;
+        lidToPhone.set(lid, phone);
+      }
+    }
+  });
 
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
@@ -129,7 +173,6 @@ export async function startWhatsApp() {
     }
   });
 
-  // Real-time incoming and outgoing messages
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
 
@@ -144,15 +187,12 @@ export async function startWhatsApp() {
         "";
       if (!text) continue;
 
-      const platformMsgId = msg.key.id ?? undefined;
       const isOutgoing = !!msg.key.fromMe;
       const pushName = isOutgoing ? "Siz" : (msg.pushName || displayId(jid));
-
-      await upsertWAMessage(jid, text, platformMsgId, pushName, isOutgoing ? "agent" : "customer");
+      await upsertWAMessage(jid, text, msg.key.id ?? undefined, pushName, isOutgoing ? "agent" : "customer");
     }
   });
 
-  // History sync — recent messages when first connecting
   sock.ev.on("messaging-history.set", async ({ messages, isLatest }) => {
     if (!isLatest) return;
     for (const msg of messages) {
@@ -167,10 +207,8 @@ export async function startWhatsApp() {
       if (!text) continue;
 
       const isOutgoing = !!msg.key.fromMe;
-      const platformMsgId = msg.key.id ?? undefined;
       const pushName = isOutgoing ? "Siz" : (msg.pushName || displayId(jid));
-
-      await upsertWAMessage(jid, text, platformMsgId, pushName, isOutgoing ? "agent" : "customer");
+      await upsertWAMessage(jid, text, msg.key.id ?? undefined, pushName, isOutgoing ? "agent" : "customer");
     }
   });
 }
@@ -198,7 +236,9 @@ export async function requestWAPairingCode(phoneNumber: string): Promise<string 
 export async function sendWAMessage(to: string, text: string): Promise<boolean> {
   if (!sock || status !== "connected") return false;
   try {
-    const jid = to.includes("@") ? to : `${to}@s.whatsapp.net`;
+    // Resolve LID if needed, then build JID
+    const resolved = resolveJid(to.includes("@") ? to : `${to}@s.whatsapp.net`);
+    const jid = resolved.includes("@") ? resolved : `${resolved}@s.whatsapp.net`;
     await sock.sendMessage(jid, { text });
     return true;
   } catch (e) {
