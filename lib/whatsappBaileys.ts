@@ -68,15 +68,22 @@ export async function startWhatsApp() {
     if (type !== "notify") return;
 
     for (const msg of messages) {
-      console.log("[wa] msg fromMe:", msg.key.fromMe, "jid:", msg.key.remoteJid, "text:", msg.message?.conversation?.slice(0, 50));
+      const jid = msg.key.remoteJid ?? "";
+      console.log("[wa] msg fromMe:", msg.key.fromMe, "jid:", jid, "text:", msg.message?.conversation?.slice(0, 50));
+
+      // Skip outgoing, broadcasts, status and internal LID messages
       if (msg.key.fromMe) continue;
+      if (jid === "status@broadcast" || jid.endsWith("@broadcast")) continue;
+      if (jid.endsWith("@lid")) continue;
+      if (jid.includes("@g.us")) continue; // group messages
+
       const text =
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
         "";
       if (!text) continue;
 
-      const senderId = msg.key.remoteJid?.replace("@s.whatsapp.net", "") ?? "";
+      const senderId = jid.replace("@s.whatsapp.net", "").replace("@c.us", "");
       if (!senderId) continue;
 
       const platformMsgId = msg.key.id ?? undefined;
