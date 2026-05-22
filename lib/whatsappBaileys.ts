@@ -82,12 +82,9 @@ export async function startWhatsApp() {
         "";
       if (!text) continue;
 
-      // Support both @s.whatsapp.net and newer @lid format
-      const senderId = jid
-        .replace("@s.whatsapp.net", "")
-        .replace("@c.us", "")
-        .replace("@lid", "");
-      if (!senderId) continue;
+      // Store full JID so we can send back correctly (@s.whatsapp.net or @lid)
+      const senderId = jid; // full JID preserved for sending
+      const displayHandle = jid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace("@lid", "");
 
       const platformMsgId = msg.key.id ?? undefined;
 
@@ -96,7 +93,7 @@ export async function startWhatsApp() {
         if (exists) continue;
       }
 
-      const pushName = msg.pushName || senderId;
+      const pushName = msg.pushName || displayHandle;
 
       let conv = await prisma.conversation.findFirst({
         where: { platform: "whatsapp", platformUserId: senderId },
@@ -115,7 +112,7 @@ export async function startWhatsApp() {
           data: {
             platform: "whatsapp",
             customerName: pushName,
-            customerHandle: senderId,
+            customerHandle: displayHandle,
             customerAvatar: initials,
             platformUserId: senderId,
             status: "active",
@@ -175,10 +172,13 @@ export async function requestWAPairingCode(phoneNumber: string): Promise<string 
 export async function sendWAMessage(to: string, text: string): Promise<boolean> {
   if (!sock || status !== "connected") return false;
   try {
+    // If full JID already (contains @), use as-is; otherwise assume phone number
     const jid = to.includes("@") ? to : `${to}@s.whatsapp.net`;
+    console.log("[wa] sending to", jid);
     await sock.sendMessage(jid, { text });
     return true;
-  } catch {
+  } catch (e) {
+    console.error("[wa] send error", e);
     return false;
   }
 }
