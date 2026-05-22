@@ -137,6 +137,16 @@ export async function startWhatsApp() {
   });
 }
 
+export async function requestWAPairingCode(phoneNumber: string): Promise<string | null> {
+  if (!sock) return null;
+  try {
+    const code = await sock.requestPairingCode(phoneNumber.replace(/\D/g, ""));
+    return code;
+  } catch {
+    return null;
+  }
+}
+
 export async function sendWAMessage(to: string, text: string): Promise<boolean> {
   if (!sock || status !== "connected") return false;
   try {

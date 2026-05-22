@@ -160,6 +160,10 @@ export default function DashboardPage() {
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [waQr, setWaQr] = useState<string | null>(null);
   const [showWaModal, setShowWaModal] = useState(false);
+  const [waTab, setWaTab] = useState<"qr" | "phone">("qr");
+  const [waPhone, setWaPhone] = useState("");
+  const [waPairingCode, setWaPairingCode] = useState<string | null>(null);
+  const [waCodeLoading, setWaCodeLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ name: string; avatar: string } | null>(null);
@@ -258,6 +262,7 @@ export default function DashboardPage() {
     es.addEventListener("wa_connected", () => {
       setWaStatus("connected");
       setWaQr(null);
+      setWaPairingCode(null);
       setShowWaModal(false);
     });
     return () => es.close();
@@ -987,27 +992,129 @@ export default function DashboardPage() {
         </aside>
       )}
 
-      {/* WhatsApp QR Modal */}
+      {/* WhatsApp Connect Modal */}
       {showWaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
-          <div className="rounded-2xl p-8 flex flex-col items-center gap-4" style={{ background: "var(--bg-primary)", maxWidth: 360, width: "100%" }}>
-            <div className="flex items-center gap-2">
-              {WA_SVG(24)}
-              <span className="font-bold text-lg">WhatsApp Bağla</span>
+          <div className="rounded-2xl flex flex-col" style={{ background: "var(--surface)", border: "1px solid var(--border)", maxWidth: 380, width: "calc(100% - 32px)", overflow: "hidden" }}>
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <div className="flex items-center gap-2">
+                {WA_SVG(20)}
+                <span className="font-bold text-base" style={{ color: "var(--text-primary)" }}>WhatsApp Bağla</span>
+              </div>
+              <button onClick={() => setShowWaModal(false)} className="p-1 rounded-lg" style={{ color: "var(--text-muted)" }}>
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            {waQr ? (
-              <>
-                <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
-                  WhatsApp&apos;ı açın → Bağlı cihazlar → Cihaz bağla → QR kodu okutun
-                </p>
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(waQr)}`} alt="QR" width={220} height={220} style={{ borderRadius: 8 }} />
-              </>
-            ) : (
-              <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
-                QR kod bekleniyor...
-              </p>
-            )}
-            <button onClick={() => setShowWaModal(false)} className="text-xs" style={{ color: "var(--text-muted)" }}>Kapat</button>
+
+            {/* Tabs */}
+            <div className="flex" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {(["qr", "phone"] as const).map((tab) => (
+                <button key={tab} onClick={() => { setWaTab(tab); setWaPairingCode(null); }}
+                  className="flex-1 py-3 text-sm font-medium transition-colors"
+                  style={{
+                    color: waTab === tab ? "#25D366" : "var(--text-muted)",
+                    borderBottom: waTab === tab ? "2px solid #25D366" : "2px solid transparent",
+                    background: "transparent",
+                  }}>
+                  {tab === "qr" ? "QR Kod" : "Telefon Numarası"}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="p-6 flex flex-col items-center gap-4">
+              {waTab === "qr" ? (
+                <>
+                  <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
+                    WhatsApp&apos;ı açın → <strong>Bağlı cihazlar</strong> → <strong>Cihaz bağla</strong> → QR kodu okutun
+                  </p>
+                  {waQr ? (
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(waQr)}`}
+                      alt="QR"
+                      width={220}
+                      height={220}
+                      style={{ borderRadius: 8, border: "1px solid var(--border)" }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 py-8">
+                      <svg className="animate-spin w-8 h-8" fill="none" viewBox="0 0 24 24" style={{ color: "#25D366" }}>
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span className="text-sm" style={{ color: "var(--text-muted)" }}>QR kod bekleniyor...</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
+                    Telefon numaranızı girin, 8 karakterlik kodu alın ve WhatsApp&apos;ta <strong>Bağlı cihazlar → Telefon numarasıyla bağlan</strong> adımını izleyin.
+                  </p>
+                  {waPairingCode ? (
+                    <div className="flex flex-col items-center gap-3 w-full">
+                      <div className="px-6 py-4 rounded-2xl w-full text-center"
+                        style={{ background: "rgba(37,211,102,0.1)", border: "2px solid rgba(37,211,102,0.3)" }}>
+                        <div className="text-xs mb-1 font-medium" style={{ color: "#25D366" }}>Bağlantı Kodu</div>
+                        <div className="text-3xl font-bold tracking-[0.3em]" style={{ color: "#25D366", fontFamily: "monospace" }}>
+                          {waPairingCode}
+                        </div>
+                      </div>
+                      <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
+                        Kodu WhatsApp&apos;a girin. Bağlantı kurulunca bu pencere kapanır.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 w-full">
+                      <input
+                        type="tel"
+                        placeholder="905321234567 (ülke kodu dahil)"
+                        value={waPhone}
+                        onChange={(e) => setWaPhone(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl text-sm"
+                        style={{
+                          background: "var(--bg)",
+                          border: "1px solid var(--border)",
+                          color: "var(--text-primary)",
+                        }}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!waPhone.trim()) return;
+                          setWaCodeLoading(true);
+                          setWaStatus("connecting");
+                          const res = await fetch("/api/whatsapp", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ phone: waPhone.trim() }),
+                          });
+                          const data = await res.json();
+                          setWaCodeLoading(false);
+                          if (data.code) setWaPairingCode(data.code);
+                        }}
+                        disabled={!waPhone.trim() || waCodeLoading}
+                        className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
+                        style={{
+                          background: waPhone.trim() && !waCodeLoading ? "#25D366" : "var(--surface-raised)",
+                          color: waPhone.trim() && !waCodeLoading ? "white" : "var(--text-muted)",
+                        }}
+                      >
+                        {waCodeLoading ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Kod alınıyor...
+                          </span>
+                        ) : "Kod Al"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
