@@ -279,6 +279,11 @@ export default function DashboardPage() {
       setWaPairingCode(null);
       setShowWaModal(false);
     });
+    es.addEventListener("wa_disconnected", () => {
+      setWaStatus("disconnected");
+      setWaQr(null);
+      setWaPairingCode(null);
+    });
     return () => es.close();
   }, [fetchConversations]);
 

@@ -52,6 +52,7 @@ export async function startWhatsApp() {
         (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
       status = "disconnected";
       qrCode = null;
+      broadcastSSE("wa_disconnected", {});
       if (shouldReconnect) {
         setTimeout(() => startWhatsApp(), 3000);
       }
