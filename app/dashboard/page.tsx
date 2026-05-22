@@ -184,6 +184,20 @@ export default function DashboardPage() {
     setCurrentUser(JSON.parse(u));
   }, [router]);
 
+  // Sync WA status on mount
+  useEffect(() => {
+    fetch("/api/whatsapp")
+      .then((r) => r.json())
+      .then((data: { status: "disconnected" | "connecting" | "connected"; qrCode: string | null }) => {
+        setWaStatus(data.status);
+        if (data.qrCode) {
+          setWaQr(data.qrCode);
+          setShowWaModal(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchConversations = useCallback(async () => {
     const params = new URLSearchParams();
     if (platformFilter !== "all") params.set("platform", platformFilter);
