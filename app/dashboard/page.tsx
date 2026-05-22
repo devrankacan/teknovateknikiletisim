@@ -282,7 +282,7 @@ export default function DashboardPage() {
     es.addEventListener("wa_disconnected", () => {
       setWaStatus("disconnected");
       setWaQr(null);
-      setWaPairingCode(null);
+      // Keep pairing code visible so user can still enter it
     });
     return () => es.close();
   }, [fetchConversations]);
