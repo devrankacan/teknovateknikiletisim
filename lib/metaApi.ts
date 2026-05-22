@@ -3,6 +3,14 @@ const META_GRAPH_URL = "https://graph.facebook.com/v21.0";
 const BASE_URL = "https://sosyal.teknovateknik.com";
 
 export async function sendWhatsAppMessage(to: string, text: string): Promise<boolean> {
+  // Baileys (WhatsApp Web) üzerinden gönder
+  try {
+    const { sendWAMessage } = await import("./whatsappBaileys");
+    const sent = await sendWAMessage(to, text);
+    if (sent) return true;
+  } catch {}
+
+  // Fallback: resmi WhatsApp API
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   if (!phoneNumberId || !token) return false;

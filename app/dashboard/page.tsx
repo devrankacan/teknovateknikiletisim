@@ -157,6 +157,9 @@ export default function DashboardPage() {
   const [messageRequests, setMessageRequests] = useState<DBConversation[]>([]);
   const [showRequests, setShowRequests] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [waQr, setWaQr] = useState<string | null>(null);
+  const [showWaModal, setShowWaModal] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ name: string; avatar: string } | null>(null);
@@ -245,6 +248,17 @@ export default function DashboardPage() {
         fetchConversations();
         return prev;
       });
+    });
+    es.addEventListener("wa_qr", (e) => {
+      const data = JSON.parse(e.data) as { qr: string };
+      setWaQr(data.qr);
+      setShowWaModal(true);
+      setWaStatus("connecting");
+    });
+    es.addEventListener("wa_connected", () => {
+      setWaStatus("connected");
+      setWaQr(null);
+      setShowWaModal(false);
     });
     return () => es.close();
   }, [fetchConversations]);
@@ -624,6 +638,30 @@ export default function DashboardPage() {
           )}
         </button>
 
+        {/* WhatsApp connect button */}
+        <button
+          onClick={async () => {
+            if (waStatus === "connected") return;
+            setWaStatus("connecting");
+            await fetch("/api/whatsapp", { method: "POST" });
+            setShowWaModal(true);
+          }}
+          className="flex items-center gap-2.5 px-4 py-3 w-full transition-colors"
+          style={{
+            borderTop: "1px solid var(--border-subtle)",
+            background: waStatus === "connected" ? "rgba(37,211,102,0.1)" : "transparent",
+            color: waStatus === "connected" ? "#25D366" : "var(--text-muted)",
+          }}
+        >
+          {WA_SVG(16)}
+          <span className="text-xs font-medium">
+            {waStatus === "connected" ? "WhatsApp Bağlı" : waStatus === "connecting" ? "Bağlanıyor..." : "WhatsApp Bağla"}
+          </span>
+          {waStatus === "connected" && (
+            <span className="ml-auto w-2 h-2 rounded-full" style={{ background: "#25D366" }} />
+          )}
+        </button>
+
         {/* Archive toggle */}
         <button
           onClick={() => { setShowArchive(!showArchive); setShowRequests(false); setSelectedConv(null); setShowMobileChat(false); }}
@@ -947,6 +985,31 @@ export default function DashboardPage() {
             </div>
           </div>
         </aside>
+      )}
+
+      {/* WhatsApp QR Modal */}
+      {showWaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="rounded-2xl p-8 flex flex-col items-center gap-4" style={{ background: "var(--bg-primary)", maxWidth: 360, width: "100%" }}>
+            <div className="flex items-center gap-2">
+              {WA_SVG(24)}
+              <span className="font-bold text-lg">WhatsApp Bağla</span>
+            </div>
+            {waQr ? (
+              <>
+                <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
+                  WhatsApp&apos;ı açın → Bağlı cihazlar → Cihaz bağla → QR kodu okutun
+                </p>
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(waQr)}`} alt="QR" width={220} height={220} style={{ borderRadius: 8 }} />
+              </>
+            ) : (
+              <p className="text-sm text-center" style={{ color: "var(--text-secondary)" }}>
+                QR kod bekleniyor...
+              </p>
+            )}
+            <button onClick={() => setShowWaModal(false)} className="text-xs" style={{ color: "var(--text-muted)" }}>Kapat</button>
+          </div>
+        </div>
       )}
     </div>
   );
